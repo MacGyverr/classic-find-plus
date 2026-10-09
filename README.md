@@ -1,6 +1,7 @@
 
 # Classic Find Plus
-<img width="758" height="624" alt="advanced" src="https://github.com/user-attachments/assets/25d0e3bb-b840-4673-953c-58abf642c197" />
+
+<img width="1616" height="909" alt="find-plus" src="https://github.com/user-attachments/assets/eec0f788-6da8-4c00-b219-103eac0315f7" />
 
 <img width="755" height="624" alt="name" src="https://github.com/user-attachments/assets/77b30b42-4f96-40ed-984f-ea4b44a5df83" />
 
