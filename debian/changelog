@@ -1,0 +1,97 @@
+classic-find-plus (1.0.0-1) unstable; urgency=medium
+
+  * Establish 1.0.0 as the release baseline for future version increments.
+  * Update README wording for the Linux Mint workflow.
+
+ -- MacGyverr / ChatGPT <classic-find-plus@localhost>  Fri, 09 Oct 2026 14:00:00 -0700
+
+classic-find-plus (0.6.0-1) unstable; urgency=medium
+
+  * Add Find Plus exclusions with directory pruning and persisted matching criteria.
+  * Add exact sortable Bytes/Bits columns and row-derived export availability.
+  * Preserve existing layouts and export formatting; expand tests and Help/About.
+
+ -- MacGyverr / ChatGPT <classic-find-plus@localhost>  Fri, 09 Oct 2026 12:00:00 -0700
+
+classic-find-plus (0.5.0-1) unstable; urgency=medium
+
+  * Export click-time displayed results to UTF-8 CSV or tab-delimited TXT.
+  * Preserve visible columns, header order, display values and effective model sorting.
+  * Add native save chooser, normalized extensions and standard overwrite confirmation.
+  * Stream cancellable private temporary output with atomic commit and error recovery.
+  * Document spreadsheet safeguards, TXT normalization and ordinary-user permissions.
+
+ -- MacGyverr / ChatGPT <classic-find-plus@localhost>  Fri, 09 Oct 2026 00:00:00 -0700
+
+classic-find-plus (0.4.0-1) unstable; urgency=medium
+
+  * Add MIME Type, Detailed Type, Group and Owner with persistent column preferences.
+  * Share Modified/Created/Accessed filtering with absent-birth Modified fallback.
+  * Move traversal scope above More Filters and remember safe normal X11 placement.
+  * Bound inputs, regex work and configuration; validate dates, adjustments and metadata.
+  * Expand native Help/About and document the dedicated security audit.
+  * Preserve receiver-managed Nemo transfers, shared settings and existing package identity.
+
+ -- MacGyverr / ChatGPT <classic-find-plus@localhost>  Fri, 09 Oct 2026 00:00:00 -0700
+
+classic-find-plus (0.3.0-1) unstable; urgency=medium
+
+  * Centralize preferences with atomic locked per-key saves and legacy migration.
+  * Restore shared search values, relative expressions, tabs, geometry and column widths.
+  * Apply active-tab filters and exclude collapsed Find Plus More Filters controls.
+  * Add persistent 20-item filename history with selection and Clear History.
+  * Preserve independent windows, result synchronization and Nemo transfer behavior.
+
+ -- MacGyverr / ChatGPT <classic-find-plus@localhost>  Fri, 09 Oct 2026 00:00:00 -0700
+
+classic-find-plus (0.2.1-1) unstable; urgency=medium
+
+  * Recheck dragged source results asynchronously after actual filesystem changes.
+  * Add bounded source-directory monitoring, delayed checks and correlated rename updates.
+  * Preserve surviving files, selection, sorting, receiver protocols and authentication behavior.
+  * Revalidate successful renames against immutable search criteria and refresh result counts.
+  * Add synchronization, cleanup and real Nemo source-row regression coverage.
+
+ -- MacGyverr / ChatGPT <classic-find-plus@localhost>  Fri, 09 Oct 2026 00:00:00 -0700
+
+classic-find-plus (0.2.0-2) unstable; urgency=medium
+
+  * Bundle the supplied avatar as the application and desktop icon.
+  * Add the supplied portrait to Help/About and retain both original assets.
+  * Verify bundled image bytes, GTK image loading and installed icon contents.
+
+ -- MacGyverr / ChatGPT <classic-find-plus@localhost>  Fri, 09 Oct 2026 00:00:00 -0700
+
+classic-find-plus (0.2.0-1) unstable; urgency=medium
+
+  * Rename the application, launcher and package to Classic Find Plus.
+  * Replace explicit wildcard mode with validated Perl-compatible regular expressions.
+  * Preserve Partial / wildcard matching and rename All-in-One to Find Plus.
+  * Add Help/About, creator credits, GitHub link and package-management instructions.
+  * Preserve the classic-find command and existing per-user preferences on migration.
+
+ -- MacGyverr / ChatGPT <classic-find-plus@localhost>  Thu, 08 Oct 2026 12:00:00 -0700
+
+classic-find (0.1.0-3) unstable; urgency=medium
+
+  * Add shared All-in-One criteria and exact size equality.
+  * Add editable slash dates and advanced relative date/time selection.
+  * Add nine configurable result columns with saved ordering and sorting.
+  * Expand four-tab, calendar, column and receiver integration coverage.
+
+ -- Classic Find contributors <classic-find@localhost>  Thu, 08 Oct 2026 00:00:00 -0700
+
+classic-find (0.1.0-2) unstable; urgency=medium
+
+  * Show custom tab header labels and icons explicitly.
+  * Enforce the declared GLib 2.70 API baseline.
+  * Label packages by build distribution and include Installed-Size.
+  * Support extracted amd64 target SDKs and dependency-checked lifecycle tests.
+
+ -- Classic Find contributors <classic-find@localhost>  Thu, 08 Oct 2026 00:00:00 -0700
+
+classic-find (0.1.0-1) unstable; urgency=medium
+
+  * Initial Debian package for Classic Find for Nemo.
+
+ -- Classic Find contributors <classic-find@localhost>  Wed, 07 Oct 2026 23:37:59 -0700

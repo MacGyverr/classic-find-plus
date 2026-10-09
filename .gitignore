@@ -1,0 +1,21 @@
+/build*/
+/dist/
+/build-deb-*/
+/build-package-*/
+/.git-local/
+/.agents/
+/.aws/
+/.codex/
+__pycache__/
+
+# Windows download metadata, not application assets.
+*:Zone.Identifier
+
+# Public source/build and publication metadata.
+/build/
+/.cfp-publication.json
+/.cfp-stage-*/
+*.o
+*.d
+/.cfp-publish.lock
+/.cfp-state-*.tmp

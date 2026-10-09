@@ -1,0 +1,16 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: Classic Find Plus
+Source: https://github.com/MacGyverr/classic-find-plus
+
+Files: *
+Copyright: 2026 MacGyverr / ChatGPT
+License: GPL-3+
+ This package is free software; you can redistribute it and/or modify it under
+ the terms of version 3 of the GNU General Public License, as published by the
+ Free Software Foundation.
+ .
+ This package is distributed in the hope that it will be useful, but WITHOUT
+ ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+ .
+ The full license is distributed in /usr/share/doc/classic-find-plus/LICENSE.

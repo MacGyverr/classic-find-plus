@@ -1,0 +1,190 @@
+# Classic Find Plus
+
+**Version 1.0.0** — a native Linux file and folder search application, inspired by the classic
+Find dialog and styled by your GTK3 desktop theme. Created by MacGyverr / ChatGPT.
+[GitHub project](https://github.com/MacGyverr/classic-find-plus) · GPL-3.0-or-later.
+
+Search by filename, extension, type, size and modified/created/accessed date. Four search tabs
+share saved values, and Help/About explains patterns and shortcuts. Find Plus combines filters
+and offers one Exclude expression that skips matching directories before entering them.
+Results support fifteen configurable columns, exact Bytes/Bits, sorting, file actions,
+multi-selection, drag-and-drop into Nemo, and CSV or tab-delimited TXT export.
+
+Linux Mint with Nemo is the primary platform. GTK3 runs on other Linux desktops with an X11
+or Wayland session; Nemo context-menu integration requires Nemo. Debian WSL2 is also used for
+development verification. Fedora, Arch and openSUSE native builds are documented but have not
+been tested on those distributions. No Windows-native application is provided.
+
+## Install a Debian package
+
+Download the DEB for **your distribution and architecture** from the project's Releases page
+when available. The 1.0.0 source release does not imply a 1.0.0 DEB has been published.
+Mint 21.3 uses Ubuntu 22.04 (jammy) libraries; a DEB built on newer Debian may not work there.
+Double-click the downloaded DEB to use your graphical package installer, or run:
+
+```sh
+sudo apt install ./classic-find-plus_VERSION_ARCH.deb
+```
+
+Replace that example filename with the actual downloaded file. Install a newer matching DEB
+the same way to upgrade. In Synaptic, find **classic-find-plus** and mark it for upgrade/removal;
+Synaptic can upgrade only when the newer package is available through a configured repository.
+For a downloaded DEB, use the graphical installer or apt command above.
+
+```sh
+sudo apt remove classic-find-plus
+# Remove package-managed configuration too:
+sudo apt purge classic-find-plus
+```
+
+Both retain per-user preferences. To reset them, remove your own
+`~/.config/classic-find-plus` separately after backing it up. Avoid mixing DEB/RPM and source
+installs at the same prefix; never run the application GUI with sudo.
+
+## Install build prerequisites
+
+Choose the traditional or modern toolchain below. Both need a C11 compiler, pkg-config,
+GTK3 >=3.22, GLib/GIO >=2.70 and `glib-compile-resources`. Python 3 supports the conservative
+Make install/uninstall helper; it is not required to compile with Make. Meson >=0.61 and
+Ninja are needed only for the modern build. No dependencies are downloaded during compilation.
+
+| Distribution | Traditional Make prerequisites | Add for Meson/Ninja |
+| --- | --- | --- |
+| Debian / Ubuntu / Mint | `sudo apt install build-essential pkg-config libgtk-3-dev libglib2.0-dev libglib2.0-dev-bin python3` | `sudo apt install meson ninja-build` |
+| Fedora | `sudo dnf install gcc make pkgconf-pkg-config gtk3-devel glib2-devel python3` | `sudo dnf install meson ninja-build` |
+| Arch Linux | `sudo pacman -S --needed base-devel pkgconf gtk3 glib2 python` | `sudo pacman -S --needed meson ninja` |
+| openSUSE | `sudo zypper install gcc make pkg-config gtk3-devel glib2-devel python3` | `sudo zypper install meson ninja` |
+
+Package names were checked against installed Debian metadata and official
+[Fedora](https://packages.fedoraproject.org/pkgs/gtk3/gtk3-devel/) and
+[Arch](https://archlinux.org/packages/extra/x86_64/gtk3/) package indexes. openSUSE package
+availability varies with release; use `zypper search` or capability `pkgconfig(gtk+-3.0)` if
+necessary. Install a release providing the minimum library versions; older distributions
+cannot be supported just by adding a compiler.
+
+Runtime: GTK3/GLib and their normal system dependencies, a desktop icon theme and PNG loader.
+SVG icons in system themes also require the distribution's SVG pixbuf loader (for example
+`librsvg2-common` on Debian/Mint). Nemo is optional; GVfs and a desktop Polkit agent/backend
+are optional for administrative destinations. Neither is needed for ordinary local searching.
+
+## Build with GNU Make
+
+```sh
+make -j4
+./build-make/classic-find-plus
+sudo make install                 # default PREFIX=/usr/local
+make clean                        # Make outputs only
+sudo make uninstall               # same PREFIX/DESTDIR as installation
+```
+
+User-local installation:
+
+```sh
+make install PREFIX="$HOME/.local"
+# Ensure ~/.local/bin is on PATH, then launch:
+classic-find-plus
+make uninstall PREFIX="$HOME/.local"
+```
+
+Run `make` again after source changes. Header dependencies are tracked automatically.
+`CC`, `CFLAGS`, `CPPFLAGS`, `LDFLAGS`, `PKG_CONFIG`, `PREFIX` and `DESTDIR` are supported.
+For packaging: `make install PREFIX=/usr DESTDIR="/absolute/staging/path"`.
+Make directly compiles C and resources; it does not call Meson or Ninja.
+
+Make removal uses its installation manifest **and current dpkg/RPM ownership checks**. It
+refuses package-owned, untracked or changed files, and does not remove preferences. Keep the
+source directory for removal. See [installation safety and recovery](docs/install.md).
+
+## Build with Meson/Ninja
+
+```sh
+meson setup build --buildtype=release --prefix=/usr/local
+meson compile -C build
+./build/classic-find-plus
+sudo meson install -C build
+meson compile -C build --clean
+```
+
+For a user installation configure `--prefix="$HOME/.local"`, then install without sudo.
+For staging use `DESTDIR="/absolute/staging/path" meson install -C build --no-rebuild`.
+Run `meson compile -C build` after changes. Debug builds use `--buildtype=debug`.
+The public tree does not contain or require development tests.
+
+Meson's generated uninstall target does not implement CFP's package ownership checks. It is
+**not a supported safe removal route** for a live installation. Prefer Make for a source
+installation that needs tracked uninstall; use Meson for building/staging, or build a native
+package with `sh scripts/build-deb.sh` and remove through the package manager. Never use Make
+uninstall on a Meson installation. See [install paths and removal](docs/install.md).
+
+## Nemo and administrative transfers
+
+The **Find Plus** action appears when one directory is selected in Nemo. It launches
+`classic-find-plus` with that directory; launch the app independently from the desktop menu
+or terminal too. Actions install to `PREFIX/share/nemo/actions`; `~/.local/share/nemo/actions`
+is the usual user-level path. Custom prefixes must be visible through PATH and XDG_DATA_DIRS.
+Nemo normally notices action changes; reopen its windows or log out/in if the action is absent.
+`nemo -q` restarts Nemo but closes its windows; finish transfers first.
+
+Linux Mint workflow:
+
+1. Open Nemo and press F3 for split panes.
+2. Open a normal folder in one pane.
+3. In the destination pane press Ctrl+L and enter `admin:///opt/` or another protected folder.
+4. Authenticate when prompted.
+5. Launch Classic Find Plus from the normal folder and drag selected results into the administrative pane.
+
+Nemo and the installed GVfs/Polkit components manage authentication and transfers. Support
+varies by distribution/session; ordinary drops onto protected local paths may fail. Keep CFP
+running as your regular user. Ctrl requests copy, Shift requests move; the receiver decides.
+[Permissions and limitations](docs/permissions.md) · [File actions](docs/file-actions.md).
+
+## Searching, results and settings
+
+Partial / wildcard uses substring matching until `*` or `?` appears, then matches the whole
+filename: `*.txt`, `report*`, `h?ll0.txt`. Exact name treats wildcards literally. RegEx uses
+GLib Perl-compatible expressions; `^report-[0-9]{4}\.txt$` matches `report-2026.txt`.
+Aa controls case sensitivity. Invalid active criteria leave existing results intact.
+Find Plus Exclude shares that mode/case: `*.mp4` with `/movies` skips matching directory
+subtrees; `*.txt` with `backup` excludes matching files and directories. Other tabs ignore it.
+Dates accept fixed/relative calendar expressions; Created falls back to Modified only when
+birth metadata is unavailable. Containing Text is a disabled placeholder, not content search.
+
+Right-click a result header to show columns, drag headers to reorder, and click to sort.
+Bytes and Bits are initially hidden, exact comma-grouped integers; Bits is bytes times eight,
+not network traffic or transfer time. Select with Ctrl/Shift or Ctrl+A. Results update after
+verified recent drags; rerun Find for uncorrelated changes or long authentication delays.
+
+Export results is enabled with displayed rows and disabled while writing. It saves all
+click-time rows and visible columns in current order/sorting, regardless of selection.
+CSV quotes every field; TXT uses tabs without field quotes and normalizes embedded tabs/newlines.
+Both are UTF-8, protect spreadsheet formula prefixes, and use a native overwrite prompt.
+Only local or mounted output destinations are supported. See [export](docs/export.md).
+
+Preferences, criteria, history, column layout and window geometry persist in
+`$XDG_CONFIG_HOME/classic-find-plus/settings.ini` (default `~/.config/classic-find-plus/settings.ini`).
+Startup and tab changes do not search automatically. Separate windows merge changed settings.
+X11 restores normal window position; Wayland leaves placement to the compositor.
+[Search details](docs/search.md) · [Settings](docs/settings.md) · [Exclusions](docs/exclusion.md).
+
+## Troubleshooting and limits
+
+- Missing `gtk/gtk.h` or pkg-config dependency errors: install the development packages, not
+  just runtime libraries. Check `pkg-config --modversion gtk+-3.0 glib-2.0`.
+- Missing `pkg-config` or `glib-compile-resources`: install pkg-config/pkgconf and GLib tools.
+- Nemo action absent: verify PATH, action directory and prefix; reopen Nemo or your session.
+- Desktop launcher absent: ensure `PREFIX/share` is in XDG_DATA_DIRS; refresh the session.
+- Permission denied: choose a writable location or an authenticated Nemo destination.
+- Wayland position not restored: global placement is controlled by the compositor.
+- Local source removal refused: preserve changed files, check package ownership, and follow
+  [recovery instructions](docs/install.md); do not bypass the checks by deleting a prefix.
+
+This is Linux/POSIX software. No hardcoded CPU architecture is required for native builds;
+only amd64 Mint-compatible DEB tooling with an extracted SDK has been verified. Other CPU
+architectures are untested. No content search, recursive folder-size calculation, privileged
+helper or guaranteed remote-backend authentication is provided. Searches keep matching rows
+in memory; exports briefly snapshot visible data. Backend calls can delay cancellation.
+Directory symlinks are not followed below the selected root.
+
+No screenshots are bundled in this release; application artwork is included with permission.
+The complete license is [LICENSE](LICENSE); artwork/system-library notices are in
+[THIRD_PARTY.md](THIRD_PARTY.md). See [CHANGELOG.md](CHANGELOG.md) for release history.

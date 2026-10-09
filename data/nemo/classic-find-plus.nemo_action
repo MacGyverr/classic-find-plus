@@ -1,0 +1,10 @@
+[Nemo Action]
+Active=true
+Name=Find Plus
+Comment=Find files or folders here
+Exec=classic-find-plus -- %F
+Icon-Name=classic-find-plus
+Selection=s
+Extensions=dir;
+Dependencies=classic-find-plus;
+Terminal=false

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gresources>
+  <gresource prefix="/org/classicfind/plus">
+    <file alias="icon.png">artwork/icon.png</file>
+    <file alias="about.png">artwork/about.png</file>
+  </gresource>
+</gresources>

@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=Classic Find Plus
+Comment=Find files or folders
+Exec=classic-find-plus
+Icon=classic-find-plus
+Terminal=false
+Categories=Utility;GTK;
+StartupNotify=true
