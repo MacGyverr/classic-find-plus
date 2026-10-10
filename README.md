@@ -1,4 +1,3 @@
-
 # Classic Find Plus
 
 <img width="1616" height="909" alt="find-plus" src="https://github.com/user-attachments/assets/eec0f788-6da8-4c00-b219-103eac0315f7" />
@@ -8,7 +7,6 @@
 <img width="759" height="621" alt="date" src="https://github.com/user-attachments/assets/730cb725-4ed4-4699-b77a-8d680503376d" />
 
 <img width="758" height="624" alt="advanced" src="https://github.com/user-attachments/assets/695cbb1c-bb1f-4c93-b938-6910afbc4408" />
-
 
 **Version 1.0.2 release candidate** — a native Linux file and folder search application, inspired by the classic
 Find dialog and styled by your GTK3 desktop theme. Created by MacGyverr / ChatGPT.
