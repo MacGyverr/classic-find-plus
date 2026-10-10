@@ -34,7 +34,7 @@ typedef struct {
     GFile *results_root;
     guint timer, status_idle;
     guint64 examined, errors;
-    gboolean has_search, cancelled, administrator_search;
+    gboolean has_search, cancelled, administrator_search, content_search;
     char *first_error;
     CfWindowPreferences preferences;
     gboolean maximized, fullscreen, iconified, updating_bounds;
@@ -308,7 +308,7 @@ static GtkWidget *all_in_one(Window *w)
     bind_control(w, "name-mode", mode, "active");
     GtkWidget *case_sensitive = gtk_toggle_button_new_with_label("Aa");
     gtk_widget_set_name(case_sensitive, "all-case-sensitive");
-    gtk_widget_set_tooltip_text(case_sensitive, "Match file name case");
+    gtk_widget_set_tooltip_text(case_sensitive, "Match file name and literal content case");
     bind_control(w, "case-sensitive", case_sensitive, "active");
     gtk_box_pack_start(GTK_BOX(options), mode, FALSE, FALSE, 0);
     gtk_box_pack_start(GTK_BOX(options), case_sensitive, FALSE, FALSE, 0);
@@ -320,16 +320,20 @@ static GtkWidget *all_in_one(Window *w)
     field(grid, "_Exclude:", exclude, 1);
 
     GtkWidget *containing = entry_new("", "containing-text");
-    gtk_entry_set_placeholder_text(GTK_ENTRY(containing), "Not implemented");
+    gtk_entry_set_placeholder_text(GTK_ENTRY(containing), "Literal text or hexadecimal bytes");
     bind_control(w, "containing-text", containing, "text");
-    gtk_editable_set_editable(GTK_EDITABLE(containing), FALSE);
-    gtk_widget_set_sensitive(containing, FALSE);
-    gtk_widget_set_tooltip_text(containing, "Content search is not implemented; this field does not filter results.");
+    gtk_widget_set_tooltip_text(containing, "Literal UTF-8 text (Aa controls case), or exact Hex bytes. Maximum pattern: 64 KiB.");
+    GtkWidget *content_row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
+    GtkWidget *hex = gtk_check_button_new_with_label("Hex");
+    gtk_widget_set_name(hex, "content-hex");
+    bind_control(w, "content-hex", hex, "active");
+    gtk_box_pack_start(GTK_BOX(content_row), containing, TRUE, TRUE, 0);
+    gtk_box_pack_start(GTK_BOX(content_row), hex, FALSE, FALSE, 0);
     GtkWidget *label = gtk_label_new_with_mnemonic("Containing _text:");
     gtk_label_set_xalign(GTK_LABEL(label), 0);
     gtk_label_set_mnemonic_widget(GTK_LABEL(label), containing);
     gtk_grid_attach(GTK_GRID(grid), label, 0, 2, 1, 1);
-    gtk_grid_attach(GTK_GRID(grid), containing, 1, 2, 2, 1);
+    gtk_grid_attach(GTK_GRID(grid), content_row, 1, 2, 2, 1);
 
     w->all_location = entry_new("", "all-location");
     bind_control(w, "location", w->all_location, "text");
@@ -624,7 +628,7 @@ static void divider_changed(GObject *object, GParamSpec *property, gpointer data
 
 static void search_status(Window *w)
 {
-    const char *state = w->search ? (w->cancelled ? "Stopping" : "Searching") :
+    const char *state = w->search ? (w->cancelled ? "Stopping" : (w->content_search ? "Searching contents" : "Searching")) :
                                   (w->cancelled ? "Stopped" : "Finished");
     guint count = gtk_tree_model_iter_n_children(GTK_TREE_MODEL(w->store), NULL);
     g_autofree char *message = g_strdup_printf("%s — %s%u results, %" G_GUINT64_FORMAT
@@ -700,6 +704,7 @@ static void find(GtkButton *button, gpointer data)
     }
     g_autoptr(GFile) root = g_file_new_for_commandline_arg(location);
     g_autoptr(CfCriteria) snapshot = cf_criteria_copy(criteria);
+    w->content_search = input.containing && *input.containing;
     w->administrator_search = geteuid() == 0 ||
         (gtk_notebook_get_current_page(GTK_NOTEBOOK(w->tabs)) == CF_TAB_PLUS &&
          gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(w->admin_search)));

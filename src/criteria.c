@@ -197,6 +197,7 @@ gboolean cf_criteria_excludes(const CfCriteria *c, GFileInfo *info)
 void cf_criteria_free(CfCriteria *c)
 {
     if (!c) return;
+    cf_content_pattern_unref(c->content); g_free(c->input_content);
     g_free(c->input_name); g_free(c->input_exclude); g_free(c->input_extension);
     g_free(c->name);
     g_free(c->extension);
@@ -210,6 +211,8 @@ CfCriteria *cf_criteria_copy(const CfCriteria *source)
 {
     if (!source) return NULL;
     CfCriteria *copy = g_memdup2(source, sizeof *source);
+    copy->content = cf_content_pattern_ref(source->content);
+    copy->input_content = g_strdup(source->input_content);
     copy->input_name = g_strdup(source->input_name);
     copy->input_exclude = g_strdup(source->input_exclude);
     copy->input_extension = g_strdup(source->input_extension);
@@ -224,12 +227,17 @@ CfCriteria *cf_criteria_copy(const CfCriteria *source)
 CfCriteria *cf_criteria_new(const CfCriteriaInput *in, GDateTime *now, GError **error)
 {
     g_autoptr(CfCriteria) c = g_new0(CfCriteria, 1);
-    if (in->name_mode > CF_NAME_REGEX || (guint)in->date_mode > CF_DATE_HOURS ||
+    if ((guint)in->content_mode > CF_CONTENT_HEX || in->name_mode > CF_NAME_REGEX || (guint)in->date_mode > CF_DATE_HOURS ||
         (in->relative_mode != CF_DATE_ALL && !cf_date_mode_relative(in->relative_mode)) || in->date_field > CF_DATE_ACCESSED ||
         in->size_mode > CF_SIZE_EQUAL || in->type > CF_TYPE_TEXT) {
         invalid(error, "Invalid filter mode.");
         return NULL;
     }
+    const char *content = in->containing ? in->containing : "";
+    c->content_mode = in->content_mode;
+    c->content = cf_content_pattern_new(content, in->content_mode, in->case_sensitive, error);
+    if (*content && !c->content) return NULL;
+    c->input_content = g_strdup(content);
     const char *name = in->name ? in->name : "";
     const char *extension = in->extension ? in->extension : "";
     const char *exclude = in->exclude ? in->exclude : "";
@@ -397,4 +405,10 @@ const char *cf_criteria_date_attribute(const CfCriteria *c, GFileInfo *info)
     if (c->date_field == CF_DATE_CREATED && g_file_info_has_attribute(info, G_FILE_ATTRIBUTE_TIME_CREATED))
         return G_FILE_ATTRIBUTE_TIME_CREATED;
     return G_FILE_ATTRIBUTE_TIME_MODIFIED;
+}
+
+gboolean cf_criteria_content_matches(const CfCriteria *c, GFile *file,
+                                     GCancellable *cancel, GError **error)
+{
+    return cf_content_match_file(c->content, file, c->follow_symlinks, cancel, error);
 }

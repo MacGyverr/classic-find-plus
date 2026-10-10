@@ -8,7 +8,7 @@ enum {
     CASE_SENSITIVE, EXTENSION_ONLY, RECURSIVE, STAY_ON_FILESYSTEM, FOLLOW_SYMLINKS,
     PLUS_TYPE, PLUS_EXTENSION, PLUS_DATE_MODE, PLUS_RECENT, PLUS_GROUP, PLUS_USER, PLUS_PERMISSIONS,
     PLUS_TYPE_ENABLED, PLUS_EXTENSION_ENABLED, PLUS_DATE_ENABLED,
-    PLUS_GROUP_ENABLED, PLUS_USER_ENABLED, PLUS_PERMISSIONS_ENABLED, PLUS_NO_HIDDEN, N_PROPERTIES
+    PLUS_GROUP_ENABLED, PLUS_USER_ENABLED, PLUS_PERMISSIONS_ENABLED, PLUS_NO_HIDDEN, CONTENT_HEX, N_PROPERTIES
 };
 
 struct _CfSearchForm {
@@ -110,6 +110,7 @@ static void cf_search_form_class_init(CfSearchFormClass *klass)
     flag_property(PLUS_USER_ENABLED, "plus-user-enabled", FALSE);
     flag_property(PLUS_PERMISSIONS_ENABLED, "plus-permissions-enabled", FALSE);
     flag_property(PLUS_NO_HIDDEN, "plus-no-hidden", FALSE);
+    flag_property(CONTENT_HEX, "content-hex", FALSE);
     g_object_class_install_properties(object_class, N_PROPERTIES, properties);
 }
 
@@ -137,6 +138,8 @@ const char *cf_search_form_get_location(CfSearchForm *form)
 CfCriteriaInput cf_search_form_get_input(CfSearchForm *form)
 {
     return (CfCriteriaInput) {
+        .containing = g_value_get_string(&form->values[CONTAINING]),
+        .content_mode = g_value_get_boolean(&form->values[CONTENT_HEX]) ? CF_CONTENT_HEX : CF_CONTENT_TEXT,
         .name = g_value_get_string(&form->values[NAME]),
         .exclude = g_value_get_string(&form->values[EXCLUDE]),
         .extension = g_value_get_string(&form->values[EXTENSION]),
@@ -163,7 +166,7 @@ gboolean cf_search_form_effective(CfSearchForm *form, int tab, gboolean more_exp
 {
     if (tab < CF_TAB_NAME || tab >= CF_TAB_HELP) return FALSE;
     *input = cf_search_form_get_input(form);
-    if (tab != CF_TAB_PLUS) input->exclude = "";
+    if (tab != CF_TAB_PLUS) { input->exclude = ""; input->containing = ""; input->content_mode = CF_CONTENT_TEXT; }
     if (tab != CF_TAB_NAME && tab != CF_TAB_PLUS) {
         input->name = ""; input->name_mode = CF_NAME_AUTO;
     }
@@ -201,7 +204,7 @@ gboolean cf_search_form_effective(CfSearchForm *form, int tab, gboolean more_exp
 void cf_search_form_reset_optional(CfSearchForm *form)
 {
     g_object_freeze_notify(G_OBJECT(form));
-    for (guint id = PLUS_TYPE; id < N_PROPERTIES; id++) {
+    for (guint id = PLUS_TYPE; id < CONTENT_HEX; id++) {
         GValue value = G_VALUE_INIT;
         g_value_init(&value, G_PARAM_SPEC_VALUE_TYPE(properties[id]));
         g_param_value_set_default(properties[id], &value);

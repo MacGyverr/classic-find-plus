@@ -4,7 +4,7 @@ Find Plus has an **Allow admin search** checkbox above More Filters. It starts u
 on every launch and is never saved. Checking it does not authenticate. Find
 captures one reference instant, validates the effective criteria and resolves relative dates,
 then requests Polkit authentication. Main date bounds AND Last N minutes/hours/days/months
-are intersected before IPC; protocol v3 transmits exact absolute microsecond cutoffs, so
+are intersected before IPC; protocol v4 transmits exact absolute microsecond cutoffs, so
 authentication delays never shift the interval. No new date-mode enum is sent to the worker.
 Other search tabs ignore the checkbox. Uncheck it for ordinary searches. A denied, canceled
 or unavailable authorization ends that search with an error; there is no ordinary fallback.
@@ -13,7 +13,7 @@ The status distinguishes administrator searches. Stop/Esc and closing the window
 The GTK application stays your regular user. A temporary system D-Bus worker runs as root,
 using the same scanner and all functional filename, RegEx, exclusion/pruning, type/MIME,
 extension, size, date, numeric UID/GID, exact Unix permissions, hidden pruning, safe symlink
-following, recursion and filesystem filters. Requests use schema version 3; mismatched GUI/worker
+following, recursion and filesystem filters. Requests use schema version 4; mismatched GUI/worker
 versions fail rather than dropping filters. Restart CFP after package upgrades. It accepts local `file:///` locations,
 including mounted filesystems, rather than remote/admin/GVfs URI credentials. Mount a remote
 filesystem normally first if appropriate. The selected root may be a directory symlink;
@@ -24,7 +24,7 @@ Results feed the existing columns, sorting, selection, history, export and URI d
 Visibility does not grant permission to open or transfer a protected file. GUI file actions,
 export and synchronization still run as your ordinary user; inaccessible operations fail
 normally. An administrative destination authenticates through the receiving file manager.
-Containing Text remains disabled; this is not content search.
+Containing Text supports authorized streaming literal UTF-8 and Hex matching; see [content search](content-search.md).
 
 ## Authorization boundary
 
@@ -37,7 +37,7 @@ inactive/other sessions and requires administrator authentication for active ses
 
 The single request is bound to that unique sender and UUID. Other callers cannot read or
 cancel it; concurrent Start requests receive Busy and can retry after the worker exits.
-Replies are metadata-only, pulled in batches of at most 32 with a 128 KiB message bound.
+Replies are metadata-only, pulled in batches of at most 32 with a 512 KiB message bound.
 The client validates types, lengths and result locations. Queues are bounded. Disconnects,
 authorization timeout (120 seconds), no reads (30 seconds), cancellation and a maximum
 15-minute request lifetime end the worker. Cancellation preserves already delivered rows;

@@ -155,7 +155,7 @@ and administrator-search criteria engine and immutable execution snapshot.
 All four tabs edit one per-window draft. Execution selects the active tab's filters before validation:
 Name uses filename/options; Date uses date/time; Advanced uses type/extension/size; Find Plus combines
 eligible main controls and expanded More Filters. Collapsed optional criteria are reset and ignored. Scope/recursion/filesystem/Follow are global; Help/About cannot search. Drafts are
-independent between windows. Containing Text remains disabled and has no effect on matching.
+independent between windows. Containing Text is an active Find Plus AND filter; see [content search](content-search.md).
 See [settings and effective search behavior](settings.md), including date-mode/After/Before details.
 
 Right-click any results header to select Name, In Folder, Size, Type, Modified, Created, Accessed,

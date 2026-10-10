@@ -179,8 +179,17 @@ static void verify_worker(GTask *task, gpointer source, gpointer data, GCancella
         }
         if (check->info && g_file_is_native(check->original)) cf_metadata_prepare(metadata, check->info);
         /* Permission, mount, backend and transient errors leave the row alone. */
-        if (check->result_file)
-            check->outcome = !job->criteria || cf_criteria_matches(job->criteria, check->info) ? UPDATE : REMOVE;
+        if (check->result_file) {
+            if (!job->criteria) check->outcome = UPDATE;
+            else if (!cf_criteria_matches(job->criteria, check->info)) check->outcome = REMOVE;
+            else {
+                g_clear_error(&error);
+                gboolean match = cf_traversal_content_matches(job->criteria,job->root,check->result_file,cancel,&error);
+                /* An ordinary GUI cannot reread protected admin results. Preserve
+                 * existing rows on permission/transient errors, as for metadata. */
+                if (!error) check->outcome = match ? UPDATE : REMOVE;
+            }
+        }
     }
     g_task_return_boolean(task, TRUE);
 }

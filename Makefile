@@ -8,7 +8,7 @@ PYTHON ?= python3
 CFLAGS ?= -O2 -g
 SOURCES := $(shell cat sources.txt)
 OBJECTS := $(patsubst src/%.c,build-make/%.o,$(SOURCES))
-WORKER_OBJECTS := build-make/worker-main.o build-make/worker-read-only.o $(addprefix build-make/,criteria.o date-expression.o search.o traversal.o metadata.o admin-protocol.o admin-client.o)
+WORKER_OBJECTS := build-make/worker-main.o build-make/worker-read-only.o $(addprefix build-make/,content-search.o criteria.o date-expression.o search.o traversal.o metadata.o admin-protocol.o admin-client.o)
 DEPS := $(OBJECTS:.o=.d) $(WORKER_OBJECTS:.o=.d) build-make/resources.d
 GTK_CFLAGS = $(shell $(PKG_CONFIG) --cflags gtk+-3.0 gio-2.0)
 GTK_LIBS = $(shell $(PKG_CONFIG) --libs gtk+-3.0 gio-2.0)

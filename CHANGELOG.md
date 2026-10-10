@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.6
+
+Find Plus Containing text now streams literal UTF-8 (Unicode case folding) or exact
+Hex bytes with a transient Hex checkbox. Immutable 64KiB patterns match across
+32KiB buffers, exit early and honor cancellation without a source-file size cutoff.
+Pinned regular-file descriptors and actual filesystem types reject devices and
+kernel interfaces. Protocol v4 extends authorized read-only admin searching without
+returning file contents. Settings, shared filters, result synchronization and public
+content-search/security documentation are updated; integrations remain unchanged.
+
 ## 1.0.5
 
 Find Plus supports OR exclusions separated by unescaped pipes in non-RegEx modes.

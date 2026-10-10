@@ -1,3 +1,11 @@
+classic-find-plus (1.0.6-1) unstable; urgency=medium
+
+  * Add streaming literal UTF-8 and exact hexadecimal content matching.
+  * Pin and verify regular files; reject devices and unsafe pseudo-filesystems.
+  * Extend authorized read-only worker protocol and document content safety limits.
+
+ -- MacGyverr / ChatGPT <classic-find-plus@localhost>  Sat, 10 Oct 2026 18:00:00 -0700
+
 classic-find-plus (1.0.5-1) unstable; urgency=medium
 
   * Add non-RegEx OR exclusions with pipe/backslash escaping and significant spaces.

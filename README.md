@@ -25,7 +25,7 @@ Windows 98 style Date search.
 Windows 98 style Advanced search.
 
 
-**Version 1.0.5** — a native Linux file and folder search application, inspired by the classic
+**Version 1.0.6** — a native Linux file and folder search application, inspired by the classic
 Find dialog and styled by your GTK3 desktop theme. Created by MacGyverr / ChatGPT.
 [GitHub project](https://github.com/MacGyverr/classic-find-plus) · GPL-3.0-or-later.
 
@@ -43,7 +43,7 @@ been tested on those distributions. No Windows-native application is provided.
 ## Install a Debian package
 
 Download the DEB for **your distribution and architecture** from the project's Releases page
-when available. Building 1.0.5 does not imply its DEB has been published.
+when available. Building 1.0.6 does not imply its DEB has been published.
 Mint 21.3 uses Ubuntu 22.04 (jammy) libraries; a DEB built on newer Debian may not work there.
 Double-click the downloaded DEB to use your graphical package installer, or run:
 
@@ -206,7 +206,7 @@ Empty terms are ignored. In RegEx mode the entire field stays one native express
 for example `(?:Movies|Pictures)|cache`; its escapes and alternation are not rewritten.
 [Exclusion rules and examples](docs/exclusion.md).
 Dates accept fixed/relative calendar expressions; Created falls back to Modified only when
-birth metadata is unavailable. Containing Text is a disabled placeholder, not content search.
+birth metadata is unavailable. Containing Text searches literal UTF-8 or exact Hex bytes on Find Plus; see [content search](docs/content-search.md).
 
 Find Plus has a compact two-column **More Filters** section. Check each optional filter to
 activate it: File type, Extension, Date mode, Group, User and exact Permissions.
@@ -265,7 +265,7 @@ X11 restores normal window position; Wayland leaves placement to the compositor.
 This is Linux/POSIX software. No hardcoded CPU architecture is required for native builds;
 only amd64 Mint-compatible DEB tooling with an extracted SDK has been verified. Other CPU
 architectures are untested. The admin syscall guard supports Linux x86-64/AArch64; AArch64
-is unverified and other worker architectures refuse startup. No content search, recursive
+is unverified and other worker architectures refuse startup. No recursive
 folder-size calculation or guaranteed remote-backend authentication is provided. Searches keep matching rows
 in memory; exports briefly snapshot visible data. Backend calls can delay cancellation.
 Directory symlinks are followed only when Follow symbolic links is enabled; safe following

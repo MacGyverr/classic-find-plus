@@ -1,5 +1,6 @@
 #pragma once
 #include <gio/gio.h>
+#include "content-search.h"
 
 typedef enum { CF_NAME_AUTO, CF_NAME_EXACT, CF_NAME_REGEX } CfNameMode;
 typedef enum { CF_DATE_ALL, CF_DATE_AFTER, CF_DATE_BEFORE, CF_DATE_BETWEEN,
@@ -9,6 +10,8 @@ typedef enum { CF_SIZE_ALL, CF_SIZE_GREATER, CF_SIZE_LESS, CF_SIZE_BETWEEN, CF_S
 typedef enum { CF_TYPE_ANY, CF_TYPE_FILES, CF_TYPE_FOLDERS, CF_TYPE_IMAGE,
                CF_TYPE_AUDIO, CF_TYPE_VIDEO, CF_TYPE_TEXT } CfType;
 typedef struct {
+    const char *containing;
+    CfContentMode content_mode;
     const char *name, *exclude, *extension, *date_start, *date_end, *recent,
                *size_start, *size_end, *user, *group, *permissions;
     CfNameMode name_mode;
@@ -29,6 +32,9 @@ CfCriteria *cf_criteria_copy(const CfCriteria *criteria);
 /* Exclusion ignores inclusion/date/size/type filters; safe before directory descent. */
 gboolean cf_criteria_excludes(const CfCriteria *criteria, GFileInfo *info);
 gboolean cf_criteria_matches(const CfCriteria *criteria, GFileInfo *info);
+/* Worker-only content check; inactive criteria do not open files. */
+gboolean cf_criteria_content_matches(const CfCriteria *criteria, GFile *file,
+                                     GCancellable *cancel, GError **error);
 gboolean cf_parse_size(const char *text, guint unit, guint64 *value, GError **error);
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(CfCriteria, cf_criteria_free)
 

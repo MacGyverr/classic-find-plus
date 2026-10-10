@@ -14,6 +14,7 @@ static inline gboolean cf_input_valid(const char *text, gsize characters)
 }
 static inline int cf_input_limit(const char *property)
 {
+    if (!strcmp(property, "containing-text")) return 256 * 1024;
     if (!strcmp(property, "location")) return CF_PATH_LIMIT;
     if (!strcmp(property, "date-start") || !strcmp(property, "date-end")) return CF_DATE_LIMIT;
     if (!strcmp(property, "size-start") || !strcmp(property, "size-end") || !strcmp(property, "recent")) return CF_NUMBER_LIMIT;

@@ -47,7 +47,16 @@ GtkWidget *cf_help_about_new(void)
         "Tabs share values: Name searches filenames, Date searches dates, Advanced searches type/extension/size, and Find Plus combines eligible filters. Stop or Esc cancels a search. "
         "Search location, Include Subfolders, Stay on this filesystem and Follow symbolic links are shared on every search tab. "
         "Stay on this filesystem limits recursive traversal to the filesystem containing the search root; you can start a search directly on another filesystem. "
-        "Aa enables case sensitivity; matching is case-insensitive by default. Filename matching does not search file contents. Containing Text is a disabled placeholder.");
+        "Aa enables case sensitivity; matching is case-insensitive by default. Filename matching does not search file contents. Containing Text searches stored file bytes only in Find Plus.");
+    paragraph(GTK_BOX(box), "help-content", "Containing text: an AND filter only in Find Plus; empty means no content scan. "
+        "Hex off searches literal UTF-8 text: error.*failed matches those exact characters, independently of filename RegEx/wildcards. Aa controls case; off uses Unicode case folding (STRASSE matches Straße). "
+        "Hex on searches exact bytes: 48656C6C6F20776F726C6421 means Hello world!; 00 FF 10 A2 includes NUL/high-bit bytes. Mixed-case digits and spaces/tabs between complete byte pairs are accepted. "
+        "Odd digits, invalid characters, 0x prefixes and whitespace-only Hex show a validation error on Find. Aa has no effect on Hex. Maximum decoded/text/case-folded pattern is 64 KiB; raw Hex allows 256 KiB. "
+        "Hex never persists and starts unchecked; toggling preserves the saved text without searching. More Filters collapse does not reset it. "
+        "Regular binary files are eligible regardless of MIME or size; 32 KiB streaming reads detect boundary matches, stop at first match, and have no automatic file-size cutoff. No PDF/Office/archive text extraction. "
+        "Stop checks between reads and bounded processing batches; blocked kernel/network/FUSE I/O may delay it. Devices, FIFOs, sockets, directories and unsafe actual kernel pseudo-filesystems are never content-scanned; regular /dev/shm files remain eligible. "
+        "Follow enables eligible regular symlink targets, with the same protections in root mode. Insensitive text treats malformed UTF-8/NUL as barriers; normalization and non-UTF-8 encodings are unsupported. "
+        "Admin content matching requires Polkit; paths/metadata only cross IPC, but protected match presence still reveals information. Existing worker resource/time limits apply. See docs/content-search.md.");
     paragraph(GTK_BOX(box), "help-wildcards", "Partial / wildcard: plain text finds that part of a filename. "
         "If you enter * or ?, the pattern matches the whole filename. * means any number of characters; ? means one character.\n"
         "Examples: *.txt finds text filenames; report* finds names beginning with report; "
@@ -92,7 +101,7 @@ GtkWidget *cf_help_about_new(void)
         "Modified means last modification; Created means filesystem creation/birth; Accessed means last access. "
         "Created searches fall back to Modified only when birth metadata is unavailable, never when a real birth timestamp fails the filter. "
         "The Created result column always shows actual birth metadata, or stays blank. Accessed may not update after every read on relatime/noatime mounts.");
-    paragraph(GTK_BOX(box), "help-input-limits", "Input limits: filename/pattern, Exclude, extension, rename and the disabled content placeholder allow up to 8192 characters; "
+    paragraph(GTK_BOX(box), "help-input-limits", "Input limits: filename/pattern, Exclude, extension and rename allow up to 8192 characters; "
         "folder paths 32768; date expressions 1024; numeric fields 32. History keeps 20 names. Settings files are limited to 1 MiB. "
         "Linux names can contain spaces, Unicode, quotes, backslashes and brackets. Rename accepts one basename: no /, empty name, ' . ' or '..'. "
         "Dates require valid calendar values (including leap years); optional time uses 24-hour HH:mm:ss. Adjustments are signed whole numbers within ±1000000; "

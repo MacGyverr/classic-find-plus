@@ -112,3 +112,6 @@ src/accounts.c
 scripts/accounts.py
 include/traversal.h
 src/traversal.c
+include/content-search.h
+src/content-search.c
+docs/content-search.md

@@ -212,8 +212,14 @@ static void worker(gpointer data, gpointer unused)
             continue; /* No enumeration, filesystem-ID query or metadata preparation. */
         }
         if (cf_criteria_matches(s->criteria, info)) {
-            if (g_file_is_native(child)) cf_metadata_prepare(metadata, info);
-            publish(s, child, info);
+            gboolean allowed = TRUE;
+            g_clear_error(&error);
+            allowed = cf_traversal_content_matches(s->criteria,s->root,child,s->cancel,&error);
+            if (error) record_error(s,child,error->message);
+            if (allowed) {
+                if (g_file_is_native(child)) cf_metadata_prepare(metadata, info);
+                publish(s, child, info);
+            }
         }
         if (s->criteria->recursive && s->criteria->follow_symlinks) {
             gboolean link=g_file_info_get_is_symlink(info);

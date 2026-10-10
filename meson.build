@@ -11,7 +11,7 @@ configuration.set_quoted('CF_ACCOUNTS_HELPER', get_option('prefix') / get_option
 configuration.set_quoted('CF_INTEGRATION_HELPER', get_option('prefix') / get_option('datadir') / 'classic-find-plus/integration-manager.py')
 configure_file(output: 'config.h', configuration: configuration)
 inc = include_directories('.', 'include')
-search_sources = files('src/traversal.c', 'src/criteria.c', 'src/date-expression.c', 'src/search.c', 'src/admin-protocol.c', 'src/admin-client.c')
+search_sources = files('src/content-search.c', 'src/traversal.c', 'src/criteria.c', 'src/date-expression.c', 'src/search.c', 'src/admin-protocol.c', 'src/admin-client.c')
 result_sources = files('src/export-dialog.c', 'src/result-export.c', 'src/metadata.c', 'src/settings.c', 'src/results.c', 'src/results-sync.c', 'src/result-columns.c', 'src/column-preferences.c', 'src/selection.c', 'src/file-operations.c', 'src/result-actions.c')
 ui_sources = files('src/accounts.c', 'src/integrations.c', 'src/window-position.c', 'src/search-history.c', 'src/window.c', 'src/preferences.c', 'src/search-form.c', 'src/date-input.c', 'src/date-dialog.c', 'src/help-about.c') + result_sources
 artwork_sources = import('gnome').compile_resources('classic-find-plus-resources',
@@ -45,7 +45,7 @@ install_data('data/artwork/icon.png', rename: 'classic-find-plus.png',
 install_symlink('classic-find', pointing_to: 'classic-find-plus', install_dir: get_option('bindir'))
 install_data('LICENSE', 'README.md', 'readme.txt', install_dir: get_option('datadir') / 'doc/classic-find-plus')
 install_data('CHANGELOG.md', 'THIRD_PARTY.md', install_dir: get_option('datadir') / 'doc/classic-find-plus')
-public_docs = ['admin-search.md', 'integrations.md', 'search.md', 'file-actions.md', 'permissions.md', 'settings.md', 'results-sync.md', 'export.md', 'exclusion.md', 'install.md', 'publishing.md', 'packaging.md']
+public_docs = ['content-search.md', 'admin-search.md', 'integrations.md', 'search.md', 'file-actions.md', 'permissions.md', 'settings.md', 'results-sync.md', 'export.md', 'exclusion.md', 'install.md', 'publishing.md', 'packaging.md']
 foreach doc : public_docs
   install_data('docs' / doc, install_dir: get_option('datadir') / 'doc/classic-find-plus/docs')
 endforeach

@@ -3,6 +3,7 @@
 #include "criteria-private.h"
 #include <stdlib.h>
 #include <errno.h>
+#include <sys/stat.h>
 
 char *cf_traversal_identity(GFileInfo *info)
 {
@@ -46,4 +47,40 @@ gboolean cf_traversal_target_allowed(const CfCriteria *c, GFile *root, GFile *di
         g_object_unref(target);target=parent;
     }
     return TRUE;
+}
+
+typedef struct { const CfCriteria *criteria; GFile *root, *file; GCancellable *cancel; } ContentScope;
+static gboolean content_scope(GFile *target, guint64 device, gpointer data, GError **error)
+{
+    ContentScope *scope=data;
+    if (!scope->criteria->follow_symlinks) {
+        /* The selected root itself may be a link. Below it, reject unexpected
+         * intermediate aliases (including an ancestor replaced after enumeration). */
+        g_autofree char *root_path=g_file_get_path(scope->root);
+        g_autofree char *base=root_path ? realpath(root_path,NULL) : NULL;
+        g_autofree char *relative=g_file_get_relative_path(scope->root,scope->file);
+        if (!base || !relative) {
+            g_set_error_literal(error,G_IO_ERROR,G_IO_ERROR_FAILED,"Cannot verify content path beneath search root.");return FALSE;
+        }
+        g_autoptr(GFile) boundary=g_file_new_for_path(base);
+        g_autoptr(GFile) expected=g_file_resolve_relative_path(boundary,relative);
+        if (!g_file_equal(target,expected)) return FALSE;
+    }
+    g_autoptr(GFile) parent=g_file_get_parent(target);
+    if (!parent || !cf_traversal_target_allowed(scope->criteria,scope->root,parent,scope->cancel,error)) return FALSE;
+    if (scope->criteria->stay_on_filesystem) {
+        g_autofree char *path=g_file_get_path(scope->root);
+        struct stat root;
+        if (!path || stat(path,&root)) {
+            g_set_error_literal(error,G_IO_ERROR,G_IO_ERROR_FAILED,"Cannot verify content root filesystem.");return FALSE;
+        }
+        if ((guint64)root.st_dev!=device) return FALSE;
+    }
+    return TRUE;
+}
+gboolean cf_traversal_content_matches(const CfCriteria *c, GFile *root,
+    GFile *file, GCancellable *cancel, GError **error)
+{
+    ContentScope scope={c,root,file,cancel};
+    return cf_content_match_checked(c->content,file,c->follow_symlinks,cancel,content_scope,&scope,error);
 }

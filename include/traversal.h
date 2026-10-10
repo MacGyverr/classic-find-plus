@@ -7,3 +7,7 @@ char *cf_traversal_identity(GFileInfo *info);
  * FALSE without an error means pruned; selected root itself is exempt. */
 gboolean cf_traversal_target_allowed(const CfCriteria *criteria, GFile *root,
     GFile *directory, GCancellable *cancel, GError **error);
+
+/* Recheck pinned content target scope before opening its data stream. */
+gboolean cf_traversal_content_matches(const CfCriteria *criteria, GFile *root,
+    GFile *file, GCancellable *cancel, GError **error);

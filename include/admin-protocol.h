@@ -4,10 +4,10 @@
 #define CF_ADMIN_PATH "/org/classicfind/Plus/Search"
 #define CF_ADMIN_INTERFACE CF_ADMIN_BUS
 #define CF_ADMIN_ACTION "org.classicfind.plus.search"
-#define CF_ADMIN_PROTOCOL_VERSION 3
-#define CF_ADMIN_CRITERIA_TYPE "(usssuuuuttxxbbbbbbbbbuuubb)"
+#define CF_ADMIN_PROTOCOL_VERSION 4
+#define CF_ADMIN_CRITERIA_TYPE "(usssuuuuttxxbbbbbbbbbuuubbsu)"
 #define CF_ADMIN_STATS_TYPE "(tttttbbs)"
-#define CF_ADMIN_MAX_MESSAGE (128 * 1024)
+#define CF_ADMIN_MAX_MESSAGE (512 * 1024)
 #define CF_ADMIN_BATCH 32
 GVariant *cf_admin_criteria_encode(const CfCriteria *criteria);
 CfCriteria *cf_admin_criteria_decode(GVariant *value, GError **error);

@@ -28,3 +28,4 @@ src/window-position.c
 src/window.c
 src/accounts.c
 src/traversal.c
+src/content-search.c

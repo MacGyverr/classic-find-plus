@@ -8,6 +8,9 @@ typedef struct {
 } CfExcludeRule;
 
 struct _CfCriteria {
+    CfContentPattern *content;
+    char *input_content;
+    CfContentMode content_mode;
     char *input_name, *input_exclude, *input_extension;
     char *name, *extension;
     GPtrArray *exclusions; /* Immutable compiled rules; shared by captured copies. */

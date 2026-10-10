@@ -11,7 +11,7 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parent.parent
-DOCS = ['admin-search.md', 'integrations.md', 'search.md', 'file-actions.md', 'permissions.md', 'settings.md', 'results-sync.md',
+DOCS = ['content-search.md', 'admin-search.md', 'integrations.md', 'search.md', 'file-actions.md', 'permissions.md', 'settings.md', 'results-sync.md',
         'export.md', 'exclusion.md', 'install.md', 'publishing.md', 'packaging.md']
 STATE = 'share/classic-find-plus/source-install.json'
 

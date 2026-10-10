@@ -20,21 +20,21 @@ GVariant *cf_admin_criteria_encode(const CfCriteria *c)
         c->size_start, c->size_end, c->date_start, c->date_end,
         c->has_start, c->has_end, c->case_sensitive, c->extension_only,
         c->recursive, c->stay_on_filesystem, c->has_uid, c->has_gid, c->has_permissions,
-        c->uid, c->gid, c->permissions, c->no_hidden, c->follow_symlinks);
+        c->uid, c->gid, c->permissions, c->no_hidden, c->follow_symlinks, c->input_content, c->content_mode);
 }
 CfCriteria *cf_admin_criteria_decode(GVariant *value, GError **error)
 {
-    if (!bounded(value, CF_ADMIN_CRITERIA_TYPE, 100 * 1024)) { invalid(error); return NULL; }
-    const char *name, *exclude, *extension;
-    guint version, mode, type, field, size_mode, uid, gid, permissions;
+    if (!bounded(value, CF_ADMIN_CRITERIA_TYPE, 450 * 1024)) { invalid(error); return NULL; }
+    const char *name, *exclude, *extension, *content;
+    guint version, mode, type, field, size_mode, uid, gid, permissions, content_mode;
     gboolean has_uid, has_gid, has_permissions, hidden, follow;
     guint64 lower, upper;
     gint64 start, end;
     gboolean has_start, has_end, sensitive, extension_only, recursive, stay;
-    g_variant_get(value, "(u&s&s&suuuuttxxbbbbbbbbbuuubb)", &version, &name, &exclude, &extension,
+    g_variant_get(value, "(u&s&s&suuuuttxxbbbbbbbbbuuubb&su)", &version, &name, &exclude, &extension,
         &mode, &type, &field, &size_mode, &lower, &upper, &start, &end,
         &has_start, &has_end, &sensitive, &extension_only, &recursive, &stay,
-        &has_uid, &has_gid, &has_permissions, &uid, &gid, &permissions, &hidden, &follow);
+        &has_uid, &has_gid, &has_permissions, &uid, &gid, &permissions, &hidden, &follow, &content, &content_mode);
     if (version != CF_ADMIN_PROTOCOL_VERSION) {
         g_set_error_literal(error,G_IO_ERROR,G_IO_ERROR_INVALID_DATA,
             "Administrator search protocol version mismatch; restart CFP after updating its package.");
@@ -48,7 +48,7 @@ CfCriteria *cf_admin_criteria_decode(GVariant *value, GError **error)
         (has_start && has_end && start >= end)) { invalid(error); return NULL; }
     g_autofree char *size_start = g_strdup_printf("%" G_GUINT64_FORMAT, lower);
     g_autofree char *size_end = g_strdup_printf("%" G_GUINT64_FORMAT, upper);
-    CfCriteriaInput input = { .name = name, .exclude = exclude, .extension = extension,
+    CfCriteriaInput input = { .containing = content, .content_mode = content_mode, .name = name, .exclude = exclude, .extension = extension,
         .name_mode = mode, .type = type, .date_field = field, .size_mode = size_mode,
         .size_start = size_start, .size_end = size_end, .case_sensitive = sensitive,
         .extension_only = extension_only, .recursive = recursive, .stay_on_filesystem = stay };

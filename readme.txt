@@ -1,4 +1,4 @@
-Classic Find Plus 1.0.5
+Classic Find Plus 1.0.6
 Created by MacGyverr / ChatGPT. GPL-3.0-or-later; see LICENSE and THIRD_PARTY.md.
 Project: https://github.com/MacGyverr/classic-find-plus
 Administrator search and the explicit root GUI work on the owner's Linux Mint 21.3 desktop.
@@ -48,7 +48,7 @@ explains wildcard/RegEx usage, dates, shortcuts and other features.
 Administrator searching: Find Plus > Allow admin search starts unchecked on every launch.
 Polkit authentication happens only on Find. Other tabs remain ordinary searches; cancellation
 or denial does not fall back. Results do not elevate file actions, exports or drag-and-drop.
-The worker accepts local/mounted folders and uses the full existing filters, not content search.
+The worker accepts local/mounted folders and uses the full filters, including authorized text/Hex content search.
 See docs/admin-search.md for installation, authorization and resource limits.
 
 Root CLI modes:
@@ -92,3 +92,14 @@ Use \| for a literal pipe and \\ for a literal backslash. Other backslashes, spa
 colons remain literal. Empty terms are ignored. RegEx uses the whole raw field as one
 native expression, e.g. (?:Movies|Pictures)|cache; no custom splitting/unescaping.
 Raw text is saved unchanged. See docs/exclusion.md for complete rules and examples.
+
+CONTENT SEARCH
+Find Plus > Containing text searches literal ASCII/UTF-8; Aa controls case.
+Hex searches exact bytes, e.g. 48656C6C6F20776F726C6421 = Hello world!.
+Spaces/tabs between complete byte pairs are allowed. Maximum pattern: 64 KiB.
+Empty input disables content scanning. Hex starts unchecked and is not saved.
+All eligible regular binary/text files stream without a source-size cutoff;
+boundary matches and early exit are supported. Stop may wait for blocked I/O.
+Devices and unsafe kernel pseudo-filesystems are skipped, including in root mode.
+No document/archive extraction; see docs/content-search.md for UTF-8, privilege
+and filesystem limitations. Protected matches require explicit authorization.

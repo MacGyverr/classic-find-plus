@@ -1,6 +1,6 @@
 # Settings, shared filters and history
 
-Classic Find Plus 1.0.5 stores its configuration at
+Classic Find Plus 1.0.6 stores its configuration at
 `$XDG_CONFIG_HOME/classic-find-plus/settings.ini`, or normally
 `~/.config/classic-find-plus/settings.ini`. GLib supplies the XDG directory. The application creates
 its directory with mode 0700 and atomically replaces the INI file with mode 0600 as the current user.
@@ -50,7 +50,7 @@ Name & Location, and an invalid RegEx cannot block Date Modified or Advanced.
 The active request is copied into the existing immutable search criteria. Relative date/time
 expressions stay as entered in the form and INI; each search evaluates them using its start clock.
 Results synchronization continues using that execution's effective snapshot, not later draft edits.
-Containing Text is persisted but remains a disabled placeholder without content searching.
+Containing Text is persisted and applies only on Find Plus. Hex is ephemeral, starts off and is never saved. See [content search](content-search.md).
 Exclude is a separate FindPlus key, active only on Find Plus even with More Filters collapsed.
 Other tabs ignore its validation and matching. It shares filename mode/case but never history.
 See [exclusion rules](exclusion.md).
