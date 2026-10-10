@@ -1,22 +1,27 @@
 # Classic Find Plus
 
 <img width="1518" height="1049" alt="find-plus" src="https://github.com/user-attachments/assets/421cba10-afb0-402b-a8c0-1b21582c639b" />
+
 Example of a Find Plus normal search.
 
 
 <img width="1521" height="1053" alt="find-plus2" src="https://github.com/user-attachments/assets/93e56d66-e61b-400e-97b8-0c0035f0e6ef" />
+
 And a Find Plus "Admin" search.
 
 
 <img width="755" height="624" alt="name" src="https://github.com/user-attachments/assets/77b30b42-4f96-40ed-984f-ea4b44a5df83" />
+
 Windows 98 style Name search.
 
 
 <img width="759" height="621" alt="date" src="https://github.com/user-attachments/assets/730cb725-4ed4-4699-b77a-8d680503376d" />
+
 Windows 98 style Date search.
 
 
 <img width="758" height="624" alt="advanced" src="https://github.com/user-attachments/assets/695cbb1c-bb1f-4c93-b938-6910afbc4408" />
+
 Windows 98 style Advanced search.
 
 
