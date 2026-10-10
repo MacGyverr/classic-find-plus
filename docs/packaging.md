@@ -34,8 +34,8 @@ the newer package; local files can use the graphical package installer. Removal/
 per-user settings. Avoid mixing source installs with package-owned paths. No RPM spec is supplied;
 native source builds on RPM distributions are documented without claiming RPM packaging tests.
 
-Phase 8 packages include the non-setuid worker, restrictive Polkit action/system-bus resources,
-and inactive optional adapter templates. Fresh installs activate no menu; upgrades preserve
+Packages include the non-setuid worker, restrictive Polkit action/system-bus resources,
+the asynchronous NSS account helper and inactive optional adapter templates. Fresh installs activate no menu; upgrades preserve
 owned legacy Nemo content and per-user configuration. Migration hooks honor DPKG_ROOT for
 safe disposable lifecycle tests and remove only unchanged migrated global content. Python
 adapters remain optional; no file manager/desktop stack is automatically installed.

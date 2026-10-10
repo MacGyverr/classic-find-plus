@@ -42,6 +42,7 @@ def plan():
         'share/dbus-1/system-services/org.classicfind.Plus.Search.service': 'build-make/org.classicfind.Plus.Search.service',
         'share/dbus-1/system.d/org.classicfind.Plus.Search.conf': 'data/privileged/org.classicfind.Plus.Search.conf',
         'share/polkit-1/actions/org.classicfind.plus.search.policy': 'data/privileged/org.classicfind.plus.search.policy',
+        'share/classic-find-plus/accounts.py': 'scripts/accounts.py',
         'share/classic-find-plus/integration-manager.py': 'scripts/integration-manager.py'})
     for name in ['classic-find-plus.nemo_action', 'classic-find-plus-nautilus.py', 'classic-find-plus-caja.py',
                  'classic-find-plus.desktop', 'classic-find-plus-thunar.xml', 'classic-find-plus-caja-script.py']:

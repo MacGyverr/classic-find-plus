@@ -1,6 +1,7 @@
 #include "metadata.h"
 #include "criteria-private.h"
 #include "admin-protocol.h"
+#include "traversal.h"
 
 #define QUEUE_LIMIT 256
 #define ATTRIBUTES "standard::name,standard::display-name,standard::type,standard::is-symlink,standard::size,standard::icon,standard::content-type,time::created,time::created-usec,time::access,time::access-usec,unix::mode,unix::uid,unix::gid,time::modified,time::modified-usec,id::filesystem,id::file"
@@ -122,6 +123,11 @@ static void remote_stats(const CfSearchStats *stats, gpointer data)
     g_mutex_unlock(&s->mutex);
 }
 
+static gint compare_uri(gconstpointer a,gconstpointer b,gpointer unused)
+{
+    (void)unused;return strcmp(a,b);
+}
+
 static void worker(gpointer data, gpointer unused)
 {
     (void) unused;
@@ -136,9 +142,11 @@ static void worker(gpointer data, gpointer unused)
     }
     g_autoptr(CfMetadataCache) metadata = cf_metadata_cache_new();
     g_autoptr(GPtrArray) stack = g_ptr_array_new_with_free_func((GDestroyNotify)frame_free);
+    g_autoptr(GHashTable) visited = g_hash_table_new_full(g_str_hash,g_str_equal,g_free,NULL);
+    g_autoptr(GTree) pending = g_tree_new_full(compare_uri,NULL,g_free,g_object_unref);
     g_autoptr(GError) error = NULL;
     g_autoptr(GFileInfo) root_info = g_file_query_info(s->root,
-        "standard::type,id::filesystem", G_FILE_QUERY_INFO_NONE, s->cancel, &error);
+        "standard::type,id::filesystem,id::file", G_FILE_QUERY_INFO_NONE, s->cancel, &error);
     if (!root_info) {
         record_error(s, s->root, error->message);
         goto done;
@@ -152,8 +160,37 @@ static void worker(gpointer data, gpointer unused)
         record_error(s, s->root, "Backend cannot identify filesystems; disable Stay on this filesystem to search here.");
         goto done;
     }
+    if (s->criteria->follow_symlinks) {
+        g_autofree char *id=cf_traversal_identity(root_info);
+        if (!id || !g_file_is_native(s->root)) {
+            record_error(s,s->root,"Safe symbolic-link traversal requires native paths and stable directory identities.");
+            goto done;
+        }
+        g_hash_table_add(visited,g_steal_pointer(&id));
+    }
     push_directory(s, stack, s->root);
-    while (stack->len && !g_cancellable_is_cancelled(s->cancel)) {
+    while ((stack->len || g_tree_nnodes(pending)) && !g_cancellable_is_cancelled(s->cancel)) {
+        if (!stack->len) {
+            GTreeNode *node=g_tree_node_first(pending);
+            g_autoptr(GFile) dir=g_object_ref(g_tree_node_value(node));
+            g_tree_remove(pending,g_tree_node_key(node));
+            g_clear_error(&error);
+            g_autoptr(GFileInfo) target=g_file_query_info(dir,"standard::type,id::filesystem,id::file",
+                G_FILE_QUERY_INFO_NONE,s->cancel,&error);
+            if (!target) { record_error(s,dir,error->message); continue; }
+            if (g_file_info_get_file_type(target)!=G_FILE_TYPE_DIRECTORY) continue;
+            const char *target_fs=g_file_info_get_attribute_string(target,G_FILE_ATTRIBUTE_ID_FILESYSTEM);
+            if (!target_fs) { record_error(s,dir,"Cannot identify target filesystem; directory skipped.");continue; }
+            if (s->criteria->stay_on_filesystem && g_strcmp0(filesystem,target_fs)) continue;
+            g_autofree char *id=cf_traversal_identity(target);
+            if (!id) { record_error(s,dir,"Cannot identify symbolic-link target; directory skipped."); continue; }
+            if (g_hash_table_contains(visited,id)) continue;
+            if (g_hash_table_size(visited)>=1000000) {
+                record_error(s,dir,"Directory identity limit reached (1000000); narrow the search root."); break;
+            }
+            if (push_directory(s,stack,dir)) g_hash_table_add(visited,g_steal_pointer(&id));
+            continue;
+        }
         Frame *frame = g_ptr_array_index(stack, stack->len - 1);
         g_clear_error(&error);
         g_autoptr(GFileInfo) info = g_file_enumerator_next_file(frame->enumerator, s->cancel, &error);
@@ -177,6 +214,32 @@ static void worker(gpointer data, gpointer unused)
         if (cf_criteria_matches(s->criteria, info)) {
             if (g_file_is_native(child)) cf_metadata_prepare(metadata, info);
             publish(s, child, info);
+        }
+        if (s->criteria->recursive && s->criteria->follow_symlinks) {
+            gboolean link=g_file_info_get_is_symlink(info);
+            if (!link && g_file_info_get_file_type(info)!=G_FILE_TYPE_DIRECTORY) continue;
+            if (link) {
+                g_clear_error(&error);
+                g_autoptr(GFileInfo) target=g_file_query_info(child,"standard::type",G_FILE_QUERY_INFO_NONE,s->cancel,&error);
+                if (!target) { record_error(s,child,error->message); continue; }
+                if (g_file_info_get_file_type(target)!=G_FILE_TYPE_DIRECTORY) continue;
+                g_autoptr(GFileInfo) lexical=g_file_info_dup(info);
+                g_file_info_set_file_type(lexical,G_FILE_TYPE_DIRECTORY);
+                gboolean allowed=!cf_criteria_excludes(s->criteria,lexical) &&
+                    cf_traversal_target_allowed(s->criteria,s->root,child,s->cancel,&error);
+                if (!allowed) {
+                    if (error) record_error(s,child,error->message);
+                    else { g_mutex_lock(&s->mutex);s->directories_pruned++;g_mutex_unlock(&s->mutex); }
+                    continue;
+                }
+            }
+            if (g_tree_nnodes(pending)>=1000000) {
+                record_error(s,child,"Pending directory limit reached (1000000); narrow the search root.");break;
+            }
+            /* Directory visits are ordered by bytewise URI, independent of backend
+             * enumeration order. The first eligible alias owns that target's children. */
+            g_tree_replace(pending,g_file_get_uri(child),g_object_ref(child));
+            continue;
         }
         if (!s->criteria->recursive || g_file_info_get_is_symlink(info) ||
             g_file_info_get_file_type(info) != G_FILE_TYPE_DIRECTORY) continue;

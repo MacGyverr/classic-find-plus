@@ -13,7 +13,8 @@ Both build systems install the same functional files under PREFIX:
 - `libexec/classic-find-plus-search-worker` (0755, never setuid).
 - `share/dbus-1/system-services` activation and `share/dbus-1/system.d` bus policy.
 - `share/polkit-1/actions/org.classicfind.plus.search.policy` (0644).
-- `share/classic-find-plus/integration-manager.py` and inactive `integrations/` templates.
+- `share/classic-find-plus/integration-manager.py`, `accounts.py` (read-only NSS catalog)
+  and inactive `integrations/` templates.
 - `share/icons/hicolor/16x16/apps/classic-find-plus.png`.
 - `share/doc/classic-find-plus/`: license, README/readme, changelog, asset notices and public docs.
 

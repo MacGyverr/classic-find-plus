@@ -12,14 +12,14 @@
   For example, `^report-[0-9]{4}\.txt$` matches `report-2026.txt`; `\.txt$` matches that suffix.
   `*.txt` is not valid regex syntax; it remains supported in Partial / wildcard mode.
   Malformed expressions show a validation error before clearing results or starting a worker.
-  Match Named against extension only also applies in RegEx mode. Other filters remain ANDed.
+  Advanced's Match Named against extension only also applies in RegEx mode. Other filters remain ANDed.
 - Named uses filesystem names converted to valid display text. Actual GFile identities retain
   original path bytes. Invalid-byte filename search/display semantics require further coverage;
   such names are never used as shell commands.
 - Extension accepts one suffix: `jpg`, `.jpg`, `*.jpg`, or multi-part `tar.gz`; leading syntax is
   normalized, and the preceding dot is required. It excludes folders and treats a leading-dot-only
   name such as `.jpg` as extensionless. Case setting also applies to extensions.
-- Match Named against extension only changes Named's target to the suffix after the last dot;
+- Advanced retains Match Named against extension only, which changes Named's target to the suffix after the last dot;
   other filters still apply. A dotfile with no later dot has no extension.
 - File type can be any, regular files, folders, or image/audio/video/text MIME families. GIO
   supplies content types. These are classifications, not guaranteed content validation.
@@ -37,26 +37,58 @@
 One saved Exclude expression shares filename mode and case, but applies only on Find Plus.
 Ordinary expressions match files and directories; a leading / targets directory components.
 Literal /new uses a prefix; wildcard/RegEx patterns retain their semantics. Matching directories
-are skipped before enumeration, with the selected root exempt and descendant symlinks not
-followed. Other enabled filters remain ANDed. See [full rules and examples](exclusion.md).
+are skipped before enumeration, with the selected root exempt. Follow symbolic links also
+checks resolved targets against pruning rules. Other enabled filters remain ANDed. See [full rules and examples](exclusion.md).
 
 ## Local-time dates
 Editable YYYY/MM/DD entries and calendar selectors use the Linux desktop's local time zone.
 Typing eight digits inserts separators; legacy YYYY-MM-DD engine input is also accepted.
-- All files imposes no date constraint.
+- Any date imposes no date constraint.
 - After D excludes that date: `mtime >= local midnight of D+1`.
 - Before D excludes that date: `mtime < local midnight of D`.
 - Between A and B includes both calendar dates: `[midnight A, midnight B+1)`.
-- Previous N days/months uses a positive whole calendar interval subtracted from the time
-  criteria are captured. The lower and capture-time bounds are inclusive; future timestamps
-  are excluded. Calendar days respect DST; months clamp to the last valid day when needed.
+- Last N minutes/hours/days/months uses the rolling interval described below.
 - End before start, impossible dates, invalid numbers and calendar overflow are errors. Modified
   time includes microseconds supplied by GIO. Missing modification metadata cannot match a date filter.
 
 The Find Plus After and Before switches enable the corresponding shared bounds. Enabling both
 uses an exclusive interval: `[midnight After+1, midnight Before)`. It must contain at least one
-calendar day. The Date Modified mode selector (also in Find Plus More filters) preserves the
-inclusive Between option and Previous N days/months. Before reads the upper date field.
+calendar day. The Date Modified mode selector preserves Any date, After, Before, Between, Last N
+minutes, Last N hours, Last N days, Last N months, and After and before in that order.
+Before reads the upper date field. Find Plus More Filters offers only Any date and the
+four Last N modes; it adds a condition without overriding main After/Before.
+
+## Rolling relative time
+
+Find captures one local reference instant before validation and Polkit authentication.
+A Last N filter includes both cutoff and reference at microsecond precision and excludes
+future timestamps. The worker receives these exact absolute bounds and never reads a
+second clock for filtering; running searches keep their captured criteria.
+
+- Last N minutes subtracts N × 60 elapsed seconds.
+- Last N hours subtracts N × 3600 elapsed seconds.
+- Last N days subtracts N × 24 elapsed hours, including across DST changes.
+- Last N months subtracts calendar months from the exact local timestamp, preserving
+  clock time where possible. GLib clamps March 31 minus one month to February 28 or 29;
+  DST transitions use GLib's local-time resolution. Months are not fixed 30-day periods.
+
+Previous N accepts positive ASCII whole integers only (1, 7, 120, 1440). Empty active N,
+zero, signs, spaces, decimals, letters and overflow show validation errors before starting.
+Editing intermediate empty text is allowed; inactive N is never validated. Checked
+arithmetic prevents wrapping or truncation. The safe maximum is dynamic: for elapsed
+units, floor((reference minus local 0001/01/01 00:00) / unit duration), with an additional
+signed 64-bit microsecond arithmetic bound. For months it is
+`12 × (reference year − 1) + reference month − 1` (at most 119987 in year 9999).
+GLib also validates each result against years 1–9999. Thus legitimate large intervals are
+accepted without an arbitrary small cap, while dates before year 1 are rejected.
+
+On Find Plus, main After/Before AND Last N must both match the same selected
+Modified/Created/Accessed timestamp. For example, Modified after 2026/09/01 plus Last
+48 hours returns only files satisfying both. A nonoverlapping combined interval reports
+an error rather than changing either filter. Placeholder/disabled main dates never apply.
+Created uses Modified only if birth metadata is absent; actual birth metadata takes
+precedence and the Created column remains empty when unavailable. Accessed is affected
+by filesystem relatime/noatime mount options.
 
 ## Advanced date/time expressions
 Calendar buttons open the native Date/Time Selection dialog. Choose a fixed calendar date or
@@ -85,11 +117,41 @@ microsecond precision. Without time, the existing whole-day boundaries apply. Im
 nonexistent local times during a DST gap, adjustments outside ±1,000,000 units, calendar overflow
 and empty/reversed intervals are validation errors. Cancel leaves the draft unchanged.
 
+## Find Plus optional filters
+
+More Filters uses a two-column four-row grid: File type / Group, Extension / User,
+Date mode / Permissions, Previous N / No Hidden files. Check an optional filter to use it;
+Previous N has no checkbox and enables automatically only while Find Plus is active, More
+Filters is expanded, Date Mode is checked, and a Last N mode is selected.
+Collapsing resets all optional checkboxes/values without searching. Reopening or a new
+window starts with defaults. Main criteria and Advanced/Date values remain separate.
+Extension accepts the suffix syntax above, independently ANDed with File name; Find Plus
+has no secondary extension-only checkbox. Any date or disabled Date mode preserves the
+main After/Before bounds; active Last N adds an AND restriction. Collapse resets Date Mode
+to unchecked/Any and N to 7/disabled; reopening does not reactivate it.
+
+Group/User enumerate the system's NSS account database, including root and service accounts,
+in an asynchronous Python child when More Filters first opens. Names include numeric IDs;
+matching compares numeric GID/UID, never display names. Unknown account names do not change
+numeric matching. Missing ownership metadata fails an enabled filter. The catalog is cached
+until CFP restarts, with an 8-second wall deadline, 5-second CPU limit, 256 MiB address limit,
+65,536 entries per kind and 4 MiB output bound. Failure/timeout disables account controls with
+an explanation while other filters work. NSS configurations may themselves limit enumeration.
+
+Permissions accepts exactly three/four octal digits (0–7), e.g. `644`, `0644`, `4755`, `2755`,
+`1777`. Matching compares `mode & 07777` exactly, including setuid/setgid/sticky bits and
+excluding file-type bits. Missing mode metadata fails an active filter. Invalid active input
+shows an error before searching; disabled malformed input is ignored.
+
+No Hidden files excludes dot-prefixed files/directories and prunes their trees before
+child enumeration. The selected root itself remains eligible even if hidden. Unchecked
+includes hidden entries subject to the other criteria. All these rules use the same ordinary
+and administrator-search criteria engine and immutable execution snapshot.
+
 ## Shared layout and result columns
 All four tabs edit one per-window draft. Execution selects the active tab's filters before validation:
 Name uses filename/options; Date uses date/time; Advanced uses type/extension/size; Find Plus combines
-eligible main controls and expanded More Filters. Collapsed hidden criteria are ignored without
-clearing values. Scope/recursion/filesystem are global; Help/About cannot search. Drafts are
+eligible main controls and expanded More Filters. Collapsed optional criteria are reset and ignored. Scope/recursion/filesystem/Follow are global; Help/About cannot search. Drafts are
 independent between windows. Containing Text remains disabled and has no effect on matching.
 See [settings and effective search behavior](settings.md), including date-mode/After/Before details.
 
@@ -110,15 +172,29 @@ windows do not overwrite newer state on close. Filename history persists its new
 ## Traversal and lifetime
 - Search only the specified root; recursive traversal is optional and on by default. Root directory
   validation and all search filesystem I/O run on workers, not GTK's event thread.
-- The explicitly selected root may itself resolve through a symlink. Child symlinks (including
-  broken links and folder links) can be results, using link metadata, but are never intentionally
-  followed during traversal. Symlink loops therefore do not cause recursive descent.
-- Stay on this filesystem defaults on. Different GIO filesystem IDs prevent descent; the mount
+- The explicitly selected root may resolve through a symlink. **Follow symbolic links** defaults
+  off and is saved independently of More Filters. Off preserves no-follow descendant traversal.
+  Link rows always use link metadata, including broken/non-directory links; enabling Follow
+  permits descent into directory targets while displaying children under the chosen alias path.
+- Follow requires native local/mounted paths and stable backend filesystem/file identities;
+  unsupported backends fail clearly. Directory identities prevent self-links, multi-directory
+  cycles and duplicate descent. Pending directories are visited in bytewise URI order,
+  independent of enumeration order; the first eligible path to an identity owns its descendants.
+  Other alias link rows can still appear. No-follow traversal keeps its existing depth-first policy.
+  Follow bounds pending and visited directories at 1,000,000 each; reaching a limit reports an
+  error and ends traversal with existing results intact. Cancellation is checked between entries,
+  lookups and target-ancestor checks; blocking filesystem calls retain the existing backend limits.
+- Pruning checks both the lexical directory component and final resolved target ancestors.
+  Inside the root, its own name and ancestors are exempt; outside the root, every target
+  ancestor is checked. Visible aliases into hidden/excluded trees cannot bypass pruning.
+  Link rows themselves may remain eligible under their own basenames/metadata; their children
+  are pruned. Resolution follows filesystem symlinks; inode/filesystem identities detect cycles.
+- Stay on this filesystem defaults on. Different actual target GIO filesystem IDs prevent descent; the mount
   directory itself may still be a result. If the root backend cannot provide IDs for a recursive
   restricted search, the job reports an error. An unknown child ID skips descent and reports an error.
   Same-filesystem bind mounts are not excluded by this option. Direct scans are not security sandboxes;
   a concurrently modified directory tree can change between metadata lookup and enumeration.
-- Iterative depth-first traversal keeps an enumerator per active directory depth; it does not
+- With Follow off, iterative depth-first traversal keeps an enumerator per active directory depth; it does not
   collect every directory or file before searching. Very deep trees can hit OS descriptor limits;
   affected directories report errors and the job continues where possible.
 - One process-wide exclusive pool runs at most two workers. Additional window jobs queue in

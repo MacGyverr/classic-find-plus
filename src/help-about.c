@@ -45,7 +45,7 @@ GtkWidget *cf_help_about_new(void)
     gtk_box_pack_start(GTK_BOX(box), cf_integrations_new(), FALSE, FALSE, 0);
     paragraph(GTK_BOX(box), "help-start", "Searching: choose a folder, enter a filename or pattern and press Find Now (F5). "
         "Tabs share values: Name searches filenames, Date searches dates, Advanced searches type/extension/size, and Find Plus combines eligible filters. Stop or Esc cancels a search. "
-        "Search location, Include Subfolders and Stay on this filesystem are shared on every search tab. "
+        "Search location, Include Subfolders, Stay on this filesystem and Follow symbolic links are shared on every search tab. "
         "Stay on this filesystem limits recursive traversal to the filesystem containing the search root; you can start a search directly on another filesystem. "
         "Aa enables case sensitivity; matching is case-insensitive by default. Filename matching does not search file contents. Containing Text is a disabled placeholder.");
     paragraph(GTK_BOX(box), "help-wildcards", "Partial / wildcard: plain text finds that part of a filename. "
@@ -58,7 +58,7 @@ GtkWidget *cf_help_about_new(void)
         "Literal /movies skips movies and movies_old; /new skips newshows but not brandnew, including in Exact name mode. "
         "Wildcard and RegEx patterns keep their usual semantics after the slash. Matching shares filename mode and Aa case sensitivity, always against the full component name. "
         "Example: File name *.mp4, Exclude /movies. Example: File name *.txt, Exclude backup (Partial / wildcard mode). "
-        "Expressions are never split at semicolons. The selected root itself is exempt; descendant symbolic links are not followed. Other tabs retain but ignore Exclude.");
+        "Expressions are never split at semicolons. The selected root itself is exempt; symbolic links require Follow enabled; resolved excluded target subtrees remain pruned. Other tabs retain but ignore Exclude.");
     paragraph(GTK_BOX(box), "help-exact", "Exact name: matches the whole filename literally, including any * or ? characters.");
     paragraph(GTK_BOX(box), "help-regex", "RegEx: uses GLib's Perl-compatible regular expressions. "
         "Matches may occur anywhere in a filename; use ^ and $ to require the beginning and end. "
@@ -70,7 +70,22 @@ GtkWidget *cf_help_about_new(void)
         "Greater/less than and size ranges exclude their boundaries; equal-to matches the exact byte count. Overflow and reversed ranges show an error. "
         "Dates use yyyy/mm/dd; calendar buttons offer fixed or relative dates, optional time and signed adjustments. "
         "Relative dates evaluate when Find starts. After/Before exclude the specified day (or instant with a time); Between includes both dates or instants. "
-        "Collapsed More Filters is ignored without clearing its values; expand to include its type, extension and additional date controls. Stay on this filesystem remains active above the expander.");
+        "More Filters has individual enable checkboxes. Collapsing resets all optional values and checkboxes without searching; each new window starts with them off, even when expanded. Main dates and older tabs keep their values. Any/disabled optional Date mode uses main After/Before; active Last N combines with main bounds using AND. Stay/Follow/Admin remain outside the reset.");
+    paragraph(GTK_BOX(box), "help-optional", "More Filters: File type, Extension, Date mode, Group, User and Permissions apply only when checked and expanded. "
+        "Extension accepts jpg, .jpg, *.jpg or tar.gz and combines with File name without a second checkbox. "
+        "Group/User include NSS system/service/root accounts, load asynchronously and are cached until restart; numeric GID/UID matching requires actual ownership metadata. "
+        "Permissions matches exactly three/four octal digits, including special bits: 644, 0644, 4755, 2755, 1777. Invalid active input prevents searching. "
+        "No Hidden files excludes dot-prefixed entries and skips entire hidden directory trees; the selected root is exempt.");
+    paragraph(GTK_BOX(box), "help-relative", "Date Mode: Any date or Last N minutes, hours, days or months. Previous N has no checkbox: it enables automatically for a checked relative mode on the active, expanded Find Plus tab. "
+        "Enter a positive whole number (ASCII digits, at least 1); inactive N is ignored. Collapse resets Date Mode off/Any and N to 7. "
+        "Date Modified keeps Any, After, Before, Between, After and before, and all four Last N modes. "
+        "Find captures one reference instant before authentication. Both edges are inclusive; newer timestamps are excluded, and running searches retain their interval. "
+        "Minutes/hours/days subtract elapsed time; a day is 24 hours across DST. Months subtract calendar months from the local clock, clamping month-end (March 31 minus one month becomes February 28/29). "
+        "N is bounded by the captured date's distance from year 1 and checked 64-bit arithmetic; months allow at most 12*(year-1)+month-1. See docs/search.md for exact limits. "
+        "Main After/Before AND Last N use the same Modified/Created/Accessed field. Nonoverlapping bounds show a validation error.");
+    paragraph(GTK_BOX(box), "help-follow", "Follow symbolic links defaults off and is saved independently. When on, native local/mounted directory targets are visited once by filesystem/file identity; cycles cannot recurse indefinitely. "
+        "Stay on this filesystem checks actual targets. Exclude and No Hidden files also check resolved target ancestors. Link rows retain link metadata; children use the first eligible alias in bytewise URI traversal order. "
+        "Unsafe or unavailable backend identities are reported rather than followed. Account lookup failures leave other filters available.");
     paragraph(GTK_BOX(box), "help-date-metadata", "Date Modified and Find Plus share a saved Modified / Created / Accessed selector. "
         "Modified means last modification; Created means filesystem creation/birth; Accessed means last access. "
         "Created searches fall back to Modified only when birth metadata is unavailable, never when a real birth timestamp fails the filter. "

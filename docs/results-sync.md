@@ -32,7 +32,9 @@ folder row was removed; these hints expire at the same deadline.
   Directory moves can correlate already displayed descendants through the directory event and
   each descendant's identity. Metadata, basename, folder, full path and sort values update together.
 - Destination scope follows the captured root, recursion and filesystem restrictions. The root
-  itself is not a result; descendant directory symlinks are not followed. Inaccessible/unknown
+  itself is not a result; descendant directory symlinks require captured Follow enabled.
+  Destination ancestors obey captured Exclude/No Hidden rules and actual target filesystems;
+  resolved link targets are checked against pruned subtrees. Inaccessible/unknown
   scope is not treated as a reliably correlated destination.
 - Correlated moves outside scope or renames failing active filters remove the stale row. With an
   unknown destination only the stale source is removed; Find Now can rediscover an in-scope move.

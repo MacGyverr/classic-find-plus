@@ -20,5 +20,6 @@ NR == 1 {
     } else {
         print "#define CF_APP_VERSION " quoted($0)
         print "#define CF_INTEGRATION_HELPER " quoted(prefix "/share/classic-find-plus/integration-manager.py")
+        print "#define CF_ACCOUNTS_HELPER " quoted(prefix "/share/classic-find-plus/accounts.py")
     }
 }

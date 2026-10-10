@@ -1,5 +1,28 @@
 # Changelog
 
+## 1.0.4
+
+Find Plus Date Mode now offers Any date and Last N minutes/hours/days/months. Previous N
+has no checkbox and enables automatically; collapse resets off/Any/7. Positive whole N
+uses checked dynamic calendar limits. Days are rolling 24-hour intervals; months clamp
+calendar month-ends. Main bounds AND relative intervals share one captured timestamp
+field/reference before authentication. Date Modified adds minutes/hours with stable saved
+mode IDs. Existing absolute-bound worker protocol, settings merge and integrations remain.
+Help and public filter/settings documentation describe the refined behavior.
+
+## 1.0.3
+
+Find Plus alone gains a compact two-column More Filters layout with individually enabled
+filters and reset-on-collapse/session defaults. Adds asynchronous cached NSS User/Group lists,
+numeric ownership and exact octal permission filters, hidden-directory pruning and persistent
+identity-aware symbolic-link traversal. Extension needs only its own enable checkbox.
+Main criteria, older tabs, results, exports and working integrations are preserved.
+Administrator searches share these filters through versioned validated IPC.
+
+Confirmed all five real file-manager (Nemo, Thunar, Caja, Dolphin, Nautilus) context launches
+ and ordinary copy/move transfers, including replacements, worked with the preceding release. 
+
+
 ## 1.0.2
 
 Caja integration now uses an executable Scripts menu launcher without requiring python-caja.

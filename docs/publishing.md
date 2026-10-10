@@ -24,3 +24,12 @@ A separate maintainer PowerShell synchronization tool is kept in the development
 it previews add/update/delete changes, requires explicit confirmation for a sync, and records
 ownership/checksums before subsequent deletions. It is not needed to build this public source.
 Publishing to a real Git repository, committing and pushing remain explicit maintainer actions.
+
+During synchronization the approved source wins for every current allowlisted file. Local
+tracked edits (including staged edits), changed previously published files, and existing
+unowned destination files generate warnings but do not block copying. Preview still writes
+nothing, and `-Sync` still requires typing `YES`. Back up any local edits you want to keep
+before confirming. Unrelated destination files and Git metadata are untouched. Changed
+obsolete files are retained with a warning; unchanged previously published obsolete files
+are listed for deletion. Unsafe paths, junctions, unreadable inputs and files changing
+after preview still stop synchronization.

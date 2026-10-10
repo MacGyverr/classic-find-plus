@@ -107,3 +107,8 @@ src/window.c
 worker/main.c
 worker/read-only.c
 worker/read-only.h
+include/accounts.h
+src/accounts.c
+scripts/accounts.py
+include/traversal.h
+src/traversal.c

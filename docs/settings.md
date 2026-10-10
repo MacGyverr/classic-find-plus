@@ -1,6 +1,6 @@
 # Settings, shared filters and history
 
-Classic Find Plus 1.0.1 stores its configuration at
+Classic Find Plus 1.0.3 stores its configuration at
 `$XDG_CONFIG_HOME/classic-find-plus/settings.ini`, or normally
 `~/.config/classic-find-plus/settings.ini`. GLib supplies the XDG directory. The application creates
 its directory with mode 0700 and atomically replaces the INI file with mode 0600 as the current user.
@@ -20,17 +20,30 @@ When Find starts, a separate effective request selects the active tab's filters 
 | Find Plus | Main filename, Exclude, size and enabled After/Before; eligible expanded More Filters |
 | Help/About | Informational; Find and search shortcuts do not start work |
 
-Location, Include Subfolders and Stay on filesystem are global scope options for all four search
+Location, Include Subfolders and Stay on filesystem and Follow symbolic links are global scope options for all four search
 tabs. Stay on filesystem keeps its existing recursive traversal semantics even when its Find Plus
 control is above More Filters. Case sensitivity remains available to extension matching.
 Advanced retains its original size controls; a stored filename does not restrict Advanced results.
 
-Find Plus keeps its existing layout. Collapsed More Filters displays **Ignored while collapsed**.
-Hidden type, extension, extension-only, date-mode and Previous N controls are excluded; their
-stored values and enabled states remain intact. Main-area Exclude, size and enabled After/Before controls
-still participate. If the saved hidden mode is inclusive Between, collapsing uses the visible
-After/Before switches' exclusive bounds without modifying the saved inclusive mode. Hidden previous
-N modes become inactive while collapsed. Expanding restores the saved full mode/type/extension.
+Find Plus alone has a compact layout. Its two-column More Filters has separate ephemeral
+values and enable flags for File type, Extension, Date mode, Group, User and
+Permissions; No Hidden files is its own checkbox. A filter participates only on Find Plus,
+with the expander open and its checkbox checked. Collapsing immediately resets all these
+values/flags (Any type, empty extension, Any date, N=7, current account/group if available,
+empty permissions, unchecked hidden exclusion), clears optional validation feedback and does
+not search. Reopening starts at defaults. Every new window starts with optional filters off,
+even if Expanded is saved true; optional values/flags are never persisted or restored.
+Older/stale optional keys are ignored. Advanced and Date tab drafts remain separate and saved.
+
+Main filename, Exclude, size and enabled After/Before retain their values. With optional Date
+mode off/Any date, the main After/Before bounds apply (exclusive, even if the Date tab stores
+inclusive Between). An active optional Last N mode adds an AND interval using the same timestamp field.
+Previous N has no independent enable flag; it enables automatically for the checked
+relative mode on the active expanded Find Plus tab. Disabled malformed N is ignored.
+Legacy plus-recent-enabled keys are ignored, never restored or written. Saved date-mode
+numbers 0–6 keep their original meanings; minutes=7 and hours=8 are appended stable
+IDs, mapped independently of dropdown ordering. Global
+scope/traversal/case, admin choice and already captured searches are unaffected by collapse.
 Validation applies only to the effective filters. For example, a saved invalid date cannot block
 Name & Location, and an invalid RegEx cannot block Date Modified or Advanced.
 
@@ -45,7 +58,7 @@ See [exclusion rules](exclusion.md).
 ## Configuration structure and migration
 
 - **Window:** Width, Height, Divider, Maximized and Tab (0–4, including Help/About).
-- **Search:** location, name, name-mode, case-sensitive, recursive and stay-on-filesystem.
+- **Search:** location, name, name-mode, case-sensitive, recursive, stay-on-filesystem and follow-symlinks (defaults false).
 - **Date:** date-mode, date-start, date-end and recent. Dates display as yyyy/mm/dd.
 - **Advanced:** extension, extension-only, file-type, size-mode, size-start, size-end and size-unit.
 - **FindPlus:** Expanded (defaults false), containing-text and exclude.

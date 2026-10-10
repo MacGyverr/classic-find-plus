@@ -27,6 +27,64 @@ static gboolean number(const char *text, guint64 *value, GError **error)
     return TRUE;
 }
 
+gboolean cf_date_mode_relative(CfDateMode mode)
+{
+    return mode == CF_DATE_MINUTES || mode == CF_DATE_HOURS || mode == CF_DATE_DAYS || mode == CF_DATE_MONTHS;
+}
+
+/* GLib supports years 1..9999. Multiplication is checked before calendar calls;
+ * the actual maximum N also depends on the captured instant and its time zone. */
+static gboolean relative_interval(CfDateMode mode, const char *text, GDateTime *clock,
+                                  gint64 *lower, gint64 *upper, GError **error)
+{
+    guint64 count;
+    if (!number(text, &count, error)) {
+        if (error && *error) g_prefix_error(error, "Previous N must be a positive whole number: ");
+        return FALSE;
+    }
+    if (!count) return invalid(error, "Previous N must be a positive whole number (at least 1).");
+    g_autoptr(GDateTime) start = NULL;
+    if (mode == CF_DATE_MONTHS) {
+        guint64 available = (guint64)(g_date_time_get_year(clock) - 1) * 12 + g_date_time_get_month(clock) - 1;
+        if (count > available) return invalid(error, "Previous N exceeds the available calendar months (year 1 minimum).");
+        start = g_date_time_add_months(clock, -(gint)count);
+    } else {
+        guint64 unit = mode == CF_DATE_MINUTES ? 60 : mode == CF_DATE_HOURS ? 3600 : 86400;
+        guint64 scale = unit * G_USEC_PER_SEC;
+        g_autoptr(GDateTime) earliest = g_date_time_new(g_date_time_get_timezone(clock), 1, 1, 1, 0, 0, 0);
+        if (!earliest || count > (guint64)(g_date_time_difference(clock, earliest)) / scale ||
+            count > G_MAXINT64 / scale)
+            return invalid(error, "Previous N exceeds the supported elapsed-time range.");
+        start = g_date_time_add(clock, -(gint64)(count * scale));
+    }
+    if (!start) return invalid(error, "Previous N extends before the supported calendar (year 1).");
+    *lower = g_date_time_to_unix(start) * G_USEC_PER_SEC + g_date_time_get_microsecond(start);
+    /* Exclusive internal upper boundary represents inclusive reference at us precision. */
+    *upper = g_date_time_to_unix(clock) * G_USEC_PER_SEC + g_date_time_get_microsecond(clock) + 1;
+    return TRUE;
+}
+
+static gboolean account_id(const char *text, guint32 *id, GError **error)
+{
+    guint64 value;
+    if (!number(text, &value, error)) return FALSE;
+    if (value >= G_MAXUINT32) return invalid(error, "Select an available account (valid numeric UID/GID required).");
+    *id = value;
+    return TRUE;
+}
+static gboolean permissions(const char *text, guint32 *mode, GError **error)
+{
+    if (!text || (strlen(text) != 3 && strlen(text) != 4))
+        return invalid(error, "Permissions must be three or four octal digits, e.g. 644 or 4755.");
+    guint32 value = 0;
+    for (const char *p = text; *p; p++) {
+        if (*p < '0' || *p > '7') return invalid(error, "Permissions accepts only octal digits 0 through 7.");
+        value = value * 8 + *p - '0';
+    }
+    *mode = value;
+    return TRUE;
+}
+
 gboolean cf_parse_size(const char *text, guint unit, guint64 *value, GError **error)
 {
     guint64 raw;
@@ -75,9 +133,10 @@ static gboolean excludes_name(const CfCriteria *c, const char *display, const ch
 }
 gboolean cf_criteria_excludes(const CfCriteria *c, GFileInfo *info)
 {
-    if (!c->exclude || !*c->exclude) return FALSE;
     const char *raw = g_file_info_get_name(info);
     if (!raw) return FALSE;
+    if (c->no_hidden && *raw == '.') return TRUE;
+    if (!c->exclude || !*c->exclude) return FALSE;
     g_autofree char *display = g_filename_display_name(raw);
     g_autofree char *folded = c->case_sensitive ? NULL : g_utf8_casefold(display, -1);
     return excludes_name(c, display, folded ? folded : display,
@@ -118,7 +177,8 @@ CfCriteria *cf_criteria_copy(const CfCriteria *source)
 CfCriteria *cf_criteria_new(const CfCriteriaInput *in, GDateTime *now, GError **error)
 {
     g_autoptr(CfCriteria) c = g_new0(CfCriteria, 1);
-    if (in->name_mode > CF_NAME_REGEX || in->date_mode > CF_DATE_BOUNDS || in->date_field > CF_DATE_ACCESSED ||
+    if (in->name_mode > CF_NAME_REGEX || (guint)in->date_mode > CF_DATE_HOURS ||
+        (in->relative_mode != CF_DATE_ALL && !cf_date_mode_relative(in->relative_mode)) || in->date_field > CF_DATE_ACCESSED ||
         in->size_mode > CF_SIZE_EQUAL || in->type > CF_TYPE_TEXT) {
         invalid(error, "Invalid filter mode.");
         return NULL;
@@ -152,6 +212,12 @@ CfCriteria *cf_criteria_new(const CfCriteriaInput *in, GDateTime *now, GError **
         &c->exclude, &c->exclude_pattern, &c->exclude_regex, error)) {
         g_prefix_error(error, "Exclude: "); return NULL;
     }
+    c->has_uid = in->user_enabled; c->has_gid = in->group_enabled;
+    c->has_permissions = in->permissions_enabled;
+    if (c->has_uid && !account_id(in->user, &c->uid, error)) return NULL;
+    if (c->has_gid && !account_id(in->group, &c->gid, error)) return NULL;
+    if (c->has_permissions && !permissions(in->permissions, &c->permissions, error)) return NULL;
+    c->no_hidden = in->no_hidden; c->follow_symlinks = in->follow_symlinks;
     c->type = in->type;
     c->date_field = in->date_field;
     c->extension_only = in->extension_only;
@@ -168,27 +234,14 @@ CfCriteria *cf_criteria_new(const CfCriteriaInput *in, GDateTime *now, GError **
             }
         }
     }
+    /* Capture once, before either bounds expression or optional interval is resolved. */
+    g_autoptr(GDateTime) clock = now ? g_date_time_ref(now) : g_date_time_new_now_local();
     if (in->date_mode != CF_DATE_ALL) {
-        g_autoptr(GDateTime) clock = now ? g_date_time_ref(now) : g_date_time_new_now_local();
         g_autoptr(GDateTime) start = NULL;
         g_autoptr(GDateTime) end = NULL;
-        if (in->date_mode == CF_DATE_DAYS || in->date_mode == CF_DATE_MONTHS) {
-            guint64 count;
-            if (!number(in->recent, &count, error)) return NULL;
-            if (!count || count > G_MAXINT) {
-                invalid(error, "The previous period must be a positive calendar interval.");
-                return NULL;
-            }
-            start = in->date_mode == CF_DATE_DAYS ? g_date_time_add_days(clock, -(gint)count)
-                                                : g_date_time_add_months(clock, -(gint)count);
-            end = g_date_time_ref(clock);
-            if (!start) {
-                invalid(error, "The previous period exceeds the supported calendar range.");
-                return NULL;
-            }
+        if (cf_date_mode_relative(in->date_mode)) {
+            if (!relative_interval(in->date_mode, in->recent, clock, &c->date_start, &c->date_end, error)) return NULL;
             c->has_start = c->has_end = TRUE;
-            /* Include the instant at which criteria were captured. */
-            c->date_end = g_date_time_to_unix(end) * G_USEC_PER_SEC + g_date_time_get_microsecond(end) + 1;
         } else {
             const char *first_text = in->date_mode == CF_DATE_BEFORE && in->date_end && *in->date_end ?
                                      in->date_end : in->date_start;
@@ -230,6 +283,17 @@ CfCriteria *cf_criteria_new(const CfCriteriaInput *in, GDateTime *now, GError **
         }
         if (start) c->date_start = g_date_time_to_unix(start) * G_USEC_PER_SEC + g_date_time_get_microsecond(start);
     }
+    if (in->relative_mode != CF_DATE_ALL) {
+        gint64 lower, upper;
+        if (!relative_interval(in->relative_mode, in->relative_recent, clock, &lower, &upper, error)) return NULL;
+        c->date_start = c->has_start ? MAX(c->date_start, lower) : lower;
+        c->date_end = c->has_end ? MIN(c->date_end, upper) : upper;
+        c->has_start = c->has_end = TRUE;
+        if (c->date_start >= c->date_end) {
+            invalid(error, "Main date bounds and Last N interval do not overlap.");
+            return NULL;
+        }
+    }
     return g_steal_pointer(&c);
 }
 
@@ -238,6 +302,13 @@ gboolean cf_criteria_matches(const CfCriteria *c, GFileInfo *info)
     GFileType type = g_file_info_get_file_type(info);
     const char *raw = g_file_info_get_name(info);
     if (!raw) return FALSE;
+    if (c->no_hidden && *raw == '.') return FALSE;
+    if (c->has_uid && (!g_file_info_has_attribute(info, G_FILE_ATTRIBUTE_UNIX_UID) ||
+        g_file_info_get_attribute_uint32(info, G_FILE_ATTRIBUTE_UNIX_UID) != c->uid)) return FALSE;
+    if (c->has_gid && (!g_file_info_has_attribute(info, G_FILE_ATTRIBUTE_UNIX_GID) ||
+        g_file_info_get_attribute_uint32(info, G_FILE_ATTRIBUTE_UNIX_GID) != c->gid)) return FALSE;
+    if (c->has_permissions && (!g_file_info_has_attribute(info, G_FILE_ATTRIBUTE_UNIX_MODE) ||
+        (g_file_info_get_attribute_uint32(info, G_FILE_ATTRIBUTE_UNIX_MODE) & 07777) != c->permissions)) return FALSE;
     g_autofree char *display = g_filename_display_name(raw);
     g_autofree char *folded = c->case_sensitive ? g_strdup(display) : g_utf8_casefold(display, -1);
     if (excludes_name(c, display, folded, type == G_FILE_TYPE_DIRECTORY)) return FALSE;

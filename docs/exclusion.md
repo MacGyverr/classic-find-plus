@@ -1,4 +1,4 @@
-# Exclusion and exact sizes (1.0.1)
+# Exclusion and exact sizes (1.0.3)
 
 Find Plus offers one Exclude expression below File name. It is restored without starting a
 search, shares filename mode and case sensitivity, and remains active with More Filters
@@ -24,10 +24,13 @@ Examples in Partial / wildcard mode:
 The worker compiles matching criteria once, copies their ownership safely, and checks each
 entry before descent, enumeration, or result publication. Other enabled filters combine by
 logical AND. The selected root is exempt even if its basename matches. Nonrecursive searches
-filter immediate entries without descending. Existing no-follow descendant symlink and
-filesystem-boundary rules remain; a directory-only expression does not treat a symlink as
-a directory. A user-selected root may follow its existing root policy. Synchronization checks
-captured exclusions on moved files and their destination ancestors without rescanning the tree.
+filter immediate entries without descending. Follow symbolic links defaults off; when enabled,
+pruning checks both lexical directories and final resolved target ancestors before descent.
+A directory-only expression treats a traversed link target as a directory; the link row still
+uses its original metadata. No Hidden files applies the same subtree policy to dot-names.
+The selected root remains exempt. See [alias ordering and target scope](search.md).
+Synchronization checks captured exclusions/hidden/Follow rules on moved destinations and
+ancestors without rescanning the tree.
 
 Traversal instrumentation verifies two directory enumeration attempts with /movies versus
 six without it, two pruned directories, and no examination of files inside excluded subtrees.

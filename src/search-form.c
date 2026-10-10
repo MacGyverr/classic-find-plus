@@ -1,10 +1,14 @@
 #include "input-limits.h"
 #include "search-form.h"
+#include <unistd.h>
 
 enum {
     PROP_0, CONTAINING, EXCLUDE, LOCATION, NAME, EXTENSION, DATE_START, DATE_END, RECENT, SIZE_START, SIZE_END,
     NAME_MODE, DATE_MODE, DATE_FIELD, SIZE_MODE, FILE_TYPE, SIZE_UNIT,
-    CASE_SENSITIVE, EXTENSION_ONLY, RECURSIVE, STAY_ON_FILESYSTEM, N_PROPERTIES
+    CASE_SENSITIVE, EXTENSION_ONLY, RECURSIVE, STAY_ON_FILESYSTEM, FOLLOW_SYMLINKS,
+    PLUS_TYPE, PLUS_EXTENSION, PLUS_DATE_MODE, PLUS_RECENT, PLUS_GROUP, PLUS_USER, PLUS_PERMISSIONS,
+    PLUS_TYPE_ENABLED, PLUS_EXTENSION_ENABLED, PLUS_DATE_ENABLED,
+    PLUS_GROUP_ENABLED, PLUS_USER_ENABLED, PLUS_PERMISSIONS_ENABLED, PLUS_NO_HIDDEN, N_PROPERTIES
 };
 
 struct _CfSearchForm {
@@ -80,7 +84,7 @@ static void cf_search_form_class_init(CfSearchFormClass *klass)
     string_property(SIZE_START, "size-start", "0");
     string_property(SIZE_END, "size-end", "1024");
     mode_property(NAME_MODE, "name-mode", CF_NAME_REGEX);
-    mode_property(DATE_MODE, "date-mode", CF_DATE_BOUNDS);
+    mode_property(DATE_MODE, "date-mode", CF_DATE_HOURS);
     mode_property(DATE_FIELD, "date-field", CF_DATE_ACCESSED);
     mode_property(SIZE_MODE, "size-mode", CF_SIZE_EQUAL);
     mode_property(FILE_TYPE, "file-type", CF_TYPE_TEXT);
@@ -89,6 +93,23 @@ static void cf_search_form_class_init(CfSearchFormClass *klass)
     flag_property(EXTENSION_ONLY, "extension-only", FALSE);
     flag_property(RECURSIVE, "recursive", TRUE);
     flag_property(STAY_ON_FILESYSTEM, "stay-on-filesystem", TRUE);
+    flag_property(FOLLOW_SYMLINKS, "follow-symlinks", FALSE);
+    mode_property(PLUS_TYPE, "plus-file-type", CF_TYPE_TEXT);
+    string_property(PLUS_EXTENSION, "plus-extension", "");
+    mode_property(PLUS_DATE_MODE, "plus-date-mode", CF_DATE_HOURS);
+    string_property(PLUS_RECENT, "plus-recent", "7");
+    g_autofree char *gid = g_strdup_printf("%u", (guint)getgid());
+    g_autofree char *uid = g_strdup_printf("%u", (guint)getuid());
+    string_property(PLUS_GROUP, "plus-group", gid);
+    string_property(PLUS_USER, "plus-user", uid);
+    string_property(PLUS_PERMISSIONS, "plus-permissions", "");
+    flag_property(PLUS_TYPE_ENABLED, "plus-type-enabled", FALSE);
+    flag_property(PLUS_EXTENSION_ENABLED, "plus-extension-enabled", FALSE);
+    flag_property(PLUS_DATE_ENABLED, "plus-date-enabled", FALSE);
+    flag_property(PLUS_GROUP_ENABLED, "plus-group-enabled", FALSE);
+    flag_property(PLUS_USER_ENABLED, "plus-user-enabled", FALSE);
+    flag_property(PLUS_PERMISSIONS_ENABLED, "plus-permissions-enabled", FALSE);
+    flag_property(PLUS_NO_HIDDEN, "plus-no-hidden", FALSE);
     g_object_class_install_properties(object_class, N_PROPERTIES, properties);
 }
 
@@ -133,7 +154,8 @@ CfCriteriaInput cf_search_form_get_input(CfSearchForm *form)
         .case_sensitive = g_value_get_boolean(&form->values[CASE_SENSITIVE]),
         .extension_only = g_value_get_boolean(&form->values[EXTENSION_ONLY]),
         .recursive = g_value_get_boolean(&form->values[RECURSIVE]),
-        .stay_on_filesystem = g_value_get_boolean(&form->values[STAY_ON_FILESYSTEM])
+        .stay_on_filesystem = g_value_get_boolean(&form->values[STAY_ON_FILESYSTEM]),
+        .follow_symlinks = g_value_get_boolean(&form->values[FOLLOW_SYMLINKS])
     };
 }
 
@@ -150,13 +172,43 @@ gboolean cf_search_form_effective(CfSearchForm *form, int tab, gboolean more_exp
     if (tab != CF_TAB_ADVANCED && (tab != CF_TAB_PLUS || !more_expanded)) {
         input->type = CF_TYPE_ANY; input->extension = ""; input->extension_only = FALSE;
     }
-    if (tab == CF_TAB_PLUS && !more_expanded) {
-        /* Main-area After/Before toggles remain active; hidden mode/Previous N do not. */
-        if (input->date_mode == CF_DATE_DAYS || input->date_mode == CF_DATE_MONTHS)
+    if (tab == CF_TAB_PLUS) {
+        /* Main date bounds keep their own draft; optional mode/period are transient. */
+        if (cf_date_mode_relative(input->date_mode))
             input->date_mode = CF_DATE_ALL;
         else if (input->date_mode == CF_DATE_BETWEEN) input->date_mode = CF_DATE_BOUNDS;
+        input->no_hidden = more_expanded && g_value_get_boolean(&form->values[PLUS_NO_HIDDEN]);
+        input->user_enabled = more_expanded && g_value_get_boolean(&form->values[PLUS_USER_ENABLED]);
+        input->group_enabled = more_expanded && g_value_get_boolean(&form->values[PLUS_GROUP_ENABLED]);
+        input->permissions_enabled = more_expanded && g_value_get_boolean(&form->values[PLUS_PERMISSIONS_ENABLED]);
+        input->user = g_value_get_string(&form->values[PLUS_USER]);
+        input->group = g_value_get_string(&form->values[PLUS_GROUP]);
+        input->permissions = g_value_get_string(&form->values[PLUS_PERMISSIONS]);
+        input->type = more_expanded && g_value_get_boolean(&form->values[PLUS_TYPE_ENABLED]) ?
+                      g_value_get_int(&form->values[PLUS_TYPE]) : CF_TYPE_ANY;
+        input->extension = more_expanded && g_value_get_boolean(&form->values[PLUS_EXTENSION_ENABLED]) ?
+                           g_value_get_string(&form->values[PLUS_EXTENSION]) : "";
+        input->extension_only = FALSE; /* Top filename always remains an independent matcher. */
+        int mode = g_value_get_int(&form->values[PLUS_DATE_MODE]);
+        if (more_expanded && g_value_get_boolean(&form->values[PLUS_DATE_ENABLED]) && cf_date_mode_relative(mode)) {
+            input->relative_mode = mode;
+            input->relative_recent = g_value_get_string(&form->values[PLUS_RECENT]);
+        }
     }
     return TRUE;
+}
+
+void cf_search_form_reset_optional(CfSearchForm *form)
+{
+    g_object_freeze_notify(G_OBJECT(form));
+    for (guint id = PLUS_TYPE; id < N_PROPERTIES; id++) {
+        GValue value = G_VALUE_INIT;
+        g_value_init(&value, G_PARAM_SPEC_VALUE_TYPE(properties[id]));
+        g_param_value_set_default(properties[id], &value);
+        g_object_set_property(G_OBJECT(form), properties[id]->name, &value);
+        g_value_unset(&value);
+    }
+    g_object_thaw_notify(G_OBJECT(form));
 }
 
 static const char *section(guint id)
@@ -170,7 +222,7 @@ static const char *section(guint id)
 void cf_search_form_restore(CfSearchForm *form, CfSettings *settings)
 {
     GKeyFile *key = cf_settings_data(settings);
-    for (guint id = 1; id < N_PROPERTIES; id++) {
+    for (guint id = 1; id < PLUS_TYPE; id++) {
         const char *name = properties[id]->name, *group = section(id);
         if (!g_key_file_has_key(key, group, name, NULL)) continue;
         if (G_VALUE_HOLDS_STRING(&form->values[id])) {
@@ -190,6 +242,7 @@ static void persist_property(GObject *object, GParamSpec *spec, gpointer data)
 {
     CfSearchForm *form = CF_SEARCH_FORM(object);
     guint id = spec->param_id;
+    if (id >= PLUS_TYPE) return; /* Optional values never survive a session. */
     const char *group = section(id);
     if (G_VALUE_HOLDS_STRING(&form->values[id]))
         cf_settings_set_string(data, group, spec->name, g_value_get_string(&form->values[id]));
@@ -201,7 +254,7 @@ void cf_search_form_track(CfSearchForm *form, CfSettings *settings)
 {
     /* Capture untouched fixed-date defaults, but never overwrite another window's saved keys. */
     g_autoptr(GKeyFile) defaults = g_key_file_new();
-    for (guint id = 1; id < N_PROPERTIES; id++) {
+    for (guint id = 1; id < PLUS_TYPE; id++) {
         const char *group = section(id), *name = properties[id]->name;
         if (G_VALUE_HOLDS_STRING(&form->values[id]))
             g_key_file_set_string(defaults, group, name, g_value_get_string(&form->values[id]));

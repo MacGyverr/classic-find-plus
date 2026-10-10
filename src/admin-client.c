@@ -30,7 +30,11 @@ void cf_admin_client_run(GFile *root, CfCriteria *criteria, GCancellable *cancel
     g_autoptr(GVariant) started = g_dbus_connection_call_sync(bus, CF_ADMIN_BUS, CF_ADMIN_PATH, CF_ADMIN_INTERFACE,
         "Start", g_variant_new("(ss@" CF_ADMIN_CRITERIA_TYPE ")", id, uri, cf_admin_criteria_encode(criteria)),
         G_VARIANT_TYPE("()"), G_DBUS_CALL_FLAGS_NONE, 125000, cancel, error);
-    if (!started) goto done;
+    if (!started) {
+        if (error && g_error_matches(*error,G_DBUS_ERROR,G_DBUS_ERROR_INVALID_ARGS))
+            g_prefix_error(error,"Administrator search protocol mismatch; update the package and restart CFP: ");
+        goto done;
+    }
     while (!g_cancellable_is_cancelled(cancel)) {
         g_autoptr(GVariant) reply = g_dbus_connection_call_sync(bus, CF_ADMIN_BUS, CF_ADMIN_PATH, CF_ADMIN_INTERFACE,
             "Read", g_variant_new("(su)", id, CF_ADMIN_BATCH),

@@ -1,6 +1,7 @@
 #include "metadata.h"
 #include "results-sync.h"
 #include "criteria-private.h"
+#include "traversal.h"
 
 #define KEY "cf-results-sync"
 #define ATTRIBUTES "standard::name,standard::type,standard::is-symlink,standard::size,standard::icon,standard::content-type,time::created,time::created-usec,time::access,time::access-usec,unix::mode,unix::uid,unix::gid,time::modified,time::modified-usec,id::filesystem,id::file"
@@ -135,12 +136,19 @@ static gboolean in_scope(Job *job, GFile *file, GCancellable *cancel)
     while (parent && !g_file_equal(parent, job->root)) {
         g_autoptr(GFileInfo) info = g_file_query_info(parent,
             "standard::name,standard::type,standard::is-symlink,id::filesystem", G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS, cancel, NULL);
-        if (!info || !g_file_info_has_attribute(info, G_FILE_ATTRIBUTE_STANDARD_TYPE) ||
-            g_file_info_get_is_symlink(info) || g_file_info_get_file_type(info) != G_FILE_TYPE_DIRECTORY)
-            return FALSE;
-        if (cf_criteria_excludes(job->criteria, info)) return FALSE;
-        if (filesystem && g_strcmp0(filesystem, g_file_info_get_attribute_string(info, G_FILE_ATTRIBUTE_ID_FILESYSTEM)))
-            return FALSE;
+        if (!info || !g_file_info_has_attribute(info, G_FILE_ATTRIBUTE_STANDARD_TYPE)) return FALSE;
+        g_autoptr(GFileInfo) target=NULL;
+        if (g_file_info_get_is_symlink(info)) {
+            if (!job->criteria->follow_symlinks ||
+                !cf_traversal_target_allowed(job->criteria,job->root,parent,cancel,NULL)) return FALSE;
+            target=g_file_query_info(parent,"standard::type,id::filesystem,id::file",G_FILE_QUERY_INFO_NONE,cancel,NULL);
+            if (!target) return FALSE;
+            g_autofree char *identity=cf_traversal_identity(target);
+            if (!identity) return FALSE;
+            g_file_info_set_file_type(info,g_file_info_get_file_type(target));
+        }
+        if (g_file_info_get_file_type(info)!=G_FILE_TYPE_DIRECTORY || cf_criteria_excludes(job->criteria,info)) return FALSE;
+        if (filesystem && g_strcmp0(filesystem, g_file_info_get_attribute_string(target ? target : info,G_FILE_ATTRIBUTE_ID_FILESYSTEM))) return FALSE;
         GFile *next = g_file_get_parent(parent);
         g_object_unref(parent);
         parent = next;

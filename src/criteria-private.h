@@ -13,6 +13,8 @@ struct _CfCriteria {
     CfDateField date_field;
     CfSizeMode size_mode;
     guint64 size_start, size_end;
+    guint32 uid, gid, permissions;
+    gboolean has_uid, has_gid, has_permissions, no_hidden, follow_symlinks;
     gint64 date_start, date_end; /* microseconds since epoch, [start, end) */
     gboolean has_start, has_end, case_sensitive, extension_only,
              recursive, stay_on_filesystem;

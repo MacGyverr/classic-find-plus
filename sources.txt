@@ -26,3 +26,5 @@ src/selection.c
 src/settings.c
 src/window-position.c
 src/window.c
+src/accounts.c
+src/traversal.c

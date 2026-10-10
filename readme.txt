@@ -1,4 +1,4 @@
-Classic Find Plus 1.0.2 release candidate
+Classic Find Plus 1.0.4
 Created by MacGyverr / ChatGPT. GPL-3.0-or-later; see LICENSE and THIRD_PARTY.md.
 Project: https://github.com/MacGyverr/classic-find-plus
 Administrator search and the explicit root GUI work on the owner's Linux Mint 21.3 desktop.
@@ -65,3 +65,23 @@ Existing legacy Nemo choices survive upgrades. Optional dependencies are not ins
 Restart the affected manager after changes; see docs/integrations.md for details and CLI controls.
 For the old Caja extension, click Switch to Scripts, restart Caja, then right-click a local
 folder or its background and choose Scripts > Find with Classic Find Plus.
+
+Find Plus More Filters: check File type, Extension, Date mode, Group, User or
+Permissions to activate it. Group/User use numeric ownership and include service/root accounts.
+Permissions matches exactly three/four octal digits, including special bits (644, 4755, 1777).
+No Hidden files skips dot-prefixed entries and prunes hidden directory trees. The selected
+root is exempt. Collapse resets every More Filters value/checkbox; they start off on launch,
+even when the section opens expanded. Main filters and other tabs remain intact.
+Follow symbolic links is separately saved, defaults off and prevents repeated/circular
+traversal by directory identity. Stay on this filesystem checks resolved targets. Excluded or
+hidden target trees cannot be entered via aliases. See docs/search.md for alias result policy.
+
+Date Mode: Any date or Last N minutes, hours, days, months. Previous N enables
+automatically for checked relative modes in expanded More Filters; positive ASCII
+whole numbers only. Collapse resets Date Mode off/Any and N=7. Main After/Before
+AND Last N use the same selected timestamp. One inclusive interval is captured when
+Find is pressed, before administrator authentication. Days are 24 elapsed hours;
+months use calendar subtraction with month-end clamping. Date Modified keeps all
+existing range modes and adds minutes/hours. Accessed depends on relatime/noatime.
+Created filtering falls back to Modified only if birth data is absent. See docs/search.md
+for dynamic calendar limits, examples and nonoverlapping-bound validation.

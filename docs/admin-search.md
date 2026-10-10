@@ -1,18 +1,24 @@
 # Administrator searches
 
 Find Plus has an **Allow admin search** checkbox above More Filters. It starts unchecked
-on every launch and is never saved. Checking it does not authenticate. Find captures and
-validates the effective criteria, resolves relative dates, then requests Polkit authentication.
+on every launch and is never saved. Checking it does not authenticate. Find
+captures one reference instant, validates the effective criteria and resolves relative dates,
+then requests Polkit authentication. Main date bounds AND Last N minutes/hours/days/months
+are intersected before IPC; protocol v2 transmits exact absolute microsecond cutoffs, so
+authentication delays never shift the interval. No new date-mode enum is sent to the worker.
 Other search tabs ignore the checkbox. Uncheck it for ordinary searches. A denied, canceled
 or unavailable authorization ends that search with an error; there is no ordinary fallback.
 The status distinguishes administrator searches. Stop/Esc and closing the window cancel.
 
 The GTK application stays your regular user. A temporary system D-Bus worker runs as root,
 using the same scanner and all functional filename, RegEx, exclusion/pruning, type/MIME,
-extension, size, date, recursion and filesystem filters. It accepts local `file:///` locations,
+extension, size, date, numeric UID/GID, exact Unix permissions, hidden pruning, safe symlink
+following, recursion and filesystem filters. Requests use schema version 2; mismatched GUI/worker
+versions fail rather than dropping filters. Restart CFP after package upgrades. It accepts local `file:///` locations,
 including mounted filesystems, rather than remote/admin/GVfs URI credentials. Mount a remote
 filesystem normally first if appropriate. The selected root may be a directory symlink;
-descendant directory symlinks are not followed. Filesystem restrictions retain their usual rules.
+descendant directory symlinks require Follow enabled and obey identity, pruning and actual
+target filesystem restrictions.
 
 Results feed the existing columns, sorting, selection, history, export and URI drag-and-drop.
 Visibility does not grant permission to open or transfer a protected file. GUI file actions,

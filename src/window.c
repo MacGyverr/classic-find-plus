@@ -12,6 +12,7 @@
 #include "date-dialog.h"
 #include "app-info.h"
 #include "help-about.h"
+#include "accounts.h"
 #include <stdio.h>
 #include <unistd.h>
 
@@ -179,6 +180,44 @@ static GtkWidget *compact_entry(Window *w, const char *property, const char *id,
     return entry;
 }
 
+/* Stable numeric IDs preserve settings while menu presentation can change. */
+static gboolean date_to_id(GBinding *binding, const GValue *from, GValue *to, gpointer data)
+{
+    (void)binding; (void)data;
+    g_value_take_string(to, g_strdup_printf("%d", g_value_get_int(from)));
+    return TRUE;
+}
+static gboolean id_to_date(GBinding *binding, const GValue *from, GValue *to, gpointer data)
+{
+    (void)binding; (void)data;
+    const char *id = g_value_get_string(from);
+    if (!id) return FALSE;
+    g_value_set_int(to, (int)g_ascii_strtoll(id, NULL, 10));
+    return TRUE;
+}
+static void bind_date_mode(Window *w, const char *property, GtkWidget *widget)
+{
+    g_object_bind_property_full(w->form, property, widget, "active-id",
+        G_BINDING_BIDIRECTIONAL | G_BINDING_SYNC_CREATE, date_to_id, id_to_date, NULL, NULL);
+}
+static GtkWidget *date_mode_combo(gboolean optional)
+{
+    const char *labels[] = { "Any date", "After date (exclusive)", "Before date (exclusive)",
+        "Between dates (inclusive)", "Last N days", "Last N months", "After and before (exclusive)",
+        "Last N minutes", "Last N hours" };
+    const CfDateMode order[] = { CF_DATE_ALL, CF_DATE_AFTER, CF_DATE_BEFORE, CF_DATE_BETWEEN,
+        CF_DATE_MINUTES, CF_DATE_HOURS, CF_DATE_DAYS, CF_DATE_MONTHS, CF_DATE_BOUNDS };
+    GtkWidget *widget = gtk_combo_box_text_new();
+    for (guint i = 0; i < G_N_ELEMENTS(order); i++) {
+        int mode = order[i];
+        if (optional && mode != CF_DATE_ALL && mode != CF_DATE_MINUTES && mode != CF_DATE_HOURS &&
+            mode != CF_DATE_DAYS && mode != CF_DATE_MONTHS) continue;
+        g_autofree char *id = g_strdup_printf("%d", mode);
+        gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(widget), id, labels[mode]);
+    }
+    return widget;
+}
+
 static GtkWidget *date_field_combo(Window *w, const char *name)
 {
     const char *fields[] = { "Modified", "Created", "Accessed", NULL };
@@ -200,20 +239,63 @@ static void bounds_changed(GtkToggleButton *button, gpointer data)
                  after ? CF_DATE_AFTER : before ? CF_DATE_BEFORE : CF_DATE_ALL, NULL);
 }
 
+static void filter_changed(GObject *form, GParamSpec *spec, gpointer data);
+
 static void more_changed(GObject *object, GParamSpec *spec, gpointer data)
 {
     (void)spec;
     Window *w = data;
     gboolean expanded = gtk_expander_get_expanded(GTK_EXPANDER(object));
     gtk_widget_set_visible(w->ignored, !expanded);
+    if (!expanded) {
+        cf_search_form_reset_optional(w->form);
+        if (!w->search && w->status) status(w, "More Filters reset; ready for the next search.", NULL);
+    }
+    if (expanded) cf_accounts_load();
+    else {
+        GtkWidget *extra = gtk_bin_get_child(GTK_BIN(w->more));
+        /* Reset account selections too when the current UID/GID is not enumerated. */
+        GtkWidget *group = g_object_get_data(G_OBJECT(extra), "cf-group");
+        GtkWidget *user = g_object_get_data(G_OBJECT(extra), "cf-user");
+        if (group) cf_accounts_default(GTK_COMBO_BOX_TEXT(group));
+        if (user) cf_accounts_default(GTK_COMBO_BOX_TEXT(user));
+    }
     cf_settings_set_bool(w->settings, "FindPlus", "Expanded", expanded);
+    filter_changed(NULL, NULL, w);
+}
+
+/* Checkbox labels double as accessible labels for compact optional inputs. */
+static GtkWidget *optional_row(GtkWidget *grid, int column, int row,
+    const char *label, GtkWidget *input, const char *id)
+{
+    GtkWidget *check = gtk_check_button_new_with_mnemonic(label);
+    gtk_widget_set_name(check, id);
+    gtk_widget_set_halign(check, GTK_ALIGN_START);
+    gtk_grid_attach(GTK_GRID(grid), check, column, row, 1, 1);
+    if (input) {
+        gtk_widget_set_hexpand(input, TRUE);
+        gtk_grid_attach(GTK_GRID(grid), input, column + 1, row, 1, 1);
+        g_object_bind_property(check, "active", input, "sensitive", G_BINDING_SYNC_CREATE);
+        atk_object_add_relationship(gtk_widget_get_accessible(input), ATK_RELATION_LABELLED_BY,
+                                    gtk_widget_get_accessible(check));
+    }
+    return check;
 }
 
 static GtkWidget *all_in_one(Window *w)
 {
     GtkWidget *grid = grid_new();
-    gtk_grid_set_row_spacing(GTK_GRID(grid), 4);
-    gtk_container_set_border_width(GTK_CONTAINER(grid), 8);
+    gtk_grid_set_row_spacing(GTK_GRID(grid), 2);
+    gtk_container_set_border_width(GTK_CONTAINER(grid), 6);
+    /* Local padding only; keep theme fonts and theme minimum control heights. */
+    GdkScreen *screen=gtk_widget_get_screen(grid);
+    if (!g_object_get_data(G_OBJECT(screen),"cf-compact-style")) {
+        GtkCssProvider *compact = gtk_css_provider_new();
+        gtk_css_provider_load_from_data(compact, "#all-in-one entry, #all-in-one button { padding-top: 1px; padding-bottom: 1px; }", -1, NULL);
+        gtk_style_context_add_provider_for_screen(screen, GTK_STYLE_PROVIDER(compact), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+        g_object_unref(compact);
+        g_object_set_data(G_OBJECT(screen),"cf-compact-style",GINT_TO_POINTER(1));
+    }
     gtk_widget_set_name(grid, "all-in-one");
     w->all_name = entry_new("", "all-name");
     bind_control(w, "name", w->all_name, "text");
@@ -284,17 +366,16 @@ static GtkWidget *all_in_one(Window *w)
     gtk_grid_attach(GTK_GRID(grid), size, 0, 4, 3, 1);
 
     GtkWidget *modified = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
-    const char *date_modes[] = { "Any date", "After", "Before", "Between", "Last N days", "Last N months", "After and before", NULL };
-    mode = combo(date_modes);
+    mode = date_mode_combo(TRUE);
     gtk_widget_set_name(mode, "all-date-mode");
     gtk_widget_set_tooltip_text(mode, "Dates use YYYY/MM/DD and local midnight. Previous periods end when Find starts.");
-    bind_control(w, "date-mode", mode, "active");
+    bind_date_mode(w, "plus-date-mode", mode);
     GtkWidget *start = date_entry(&w->all_date_start, "", "all-date-start", TRUE);
     GtkWidget *end = date_entry(&w->all_date_end, "", "all-date-end", TRUE);
     bind_control(w, "date-start", w->all_date_start, "text");
     bind_control(w, "date-end", w->all_date_end, "text");
-    w->all_recent = compact_entry(w, "recent", "all-recent", 3);
-    gtk_widget_set_tooltip_text(w->all_recent, "N: number of previous calendar days or months");
+    w->all_recent = compact_entry(w, "plus-recent", "all-recent", 3);
+    gtk_widget_set_tooltip_text(w->all_recent, "Positive whole N: elapsed minutes, hours, 24-hour days, or calendar months");
     gtk_box_pack_start(GTK_BOX(modified), date_field_combo(w, "all-date-field"), FALSE, FALSE, 0);
     w->all_after = gtk_toggle_button_new_with_label("After:");
     w->all_before = gtk_toggle_button_new_with_label("Before:");
@@ -314,7 +395,7 @@ static GtkWidget *all_in_one(Window *w)
     GtkWidget *header = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
     GtkWidget *title = gtk_label_new_with_mnemonic("More _filters");
     gtk_label_set_mnemonic_widget(GTK_LABEL(title), more);
-    w->ignored = gtk_label_new("Ignored while collapsed");
+    w->ignored = gtk_label_new("Reset while collapsed");
     gtk_widget_set_name(w->ignored, "more-ignored");
     gtk_style_context_add_class(gtk_widget_get_style_context(w->ignored), "dim-label");
     gtk_widget_set_no_show_all(w->ignored, TRUE);
@@ -328,31 +409,73 @@ static GtkWidget *all_in_one(Window *w)
     g_signal_connect(more, "notify::expanded", G_CALLBACK(more_changed), w);
     gtk_widget_set_name(more, "all-more-filters");
     GtkWidget *extra = grid_new();
-    field(extra, "Date mode:", mode, 4);
-    field(extra, "Previous N:", w->all_recent, 5);
+    gtk_widget_set_name(extra, "all-extra-grid");
+    gtk_grid_set_row_spacing(GTK_GRID(extra), 2);
+    gtk_grid_set_column_spacing(GTK_GRID(extra), 8);
+    gtk_container_set_border_width(GTK_CONTAINER(extra), 4);
     GtkWidget *type = combo(types);
     gtk_widget_set_name(type, "all-file-type");
-    bind_control(w, "file-type", type, "active");
-    field(extra, "File t_ype:", type, 0);
+    bind_control(w, "plus-file-type", type, "active");
+    GtkWidget *enable_type = optional_row(extra, 0, 0, "File t_ype:", type, "all-enable-type");
+    bind_control(w, "plus-type-enabled", enable_type, "active");
     GtkWidget *extension = entry_new("", "all-extension");
-    gtk_entry_set_placeholder_text(GTK_ENTRY(extension), "e.g. jpg or tar.gz");
-    bind_control(w, "extension", extension, "text");
-    field(extra, "_Extension:", extension, 1);
-    GtkWidget *extension_only = gtk_check_button_new_with_label("Match file name against extension only");
-    gtk_widget_set_name(extension_only, "all-extension-only");
-    bind_control(w, "extension-only", extension_only, "active");
-    gtk_grid_attach(GTK_GRID(extra), extension_only, 1, 2, 1, 1);
+    gtk_entry_set_width_chars(GTK_ENTRY(extension), 12);
+    gtk_entry_set_placeholder_text(GTK_ENTRY(extension), "jpg or tar.gz");
+    bind_control(w, "plus-extension", extension, "text");
+    GtkWidget *enable_extension = optional_row(extra, 0, 1, "_Extension:", extension, "all-enable-extension");
+    bind_control(w, "plus-extension-enabled", enable_extension, "active");
+    GtkWidget *enable_date = optional_row(extra, 0, 2, "Date _mode:", mode, "all-enable-date");
+    bind_control(w, "plus-date-enabled", enable_date, "active");
+    GtkWidget *recent_label = gtk_label_new_with_mnemonic("Previous _N:");
+    gtk_label_set_mnemonic_widget(GTK_LABEL(recent_label), w->all_recent);
+    gtk_widget_set_halign(recent_label, GTK_ALIGN_START);
+    gtk_grid_attach(GTK_GRID(extra), recent_label, 0, 3, 1, 1);
+    gtk_grid_attach(GTK_GRID(extra), w->all_recent, 1, 3, 1, 1);
+    GtkWidget *group = gtk_combo_box_text_new();
+    gtk_widget_set_name(group, "all-group");
+    GtkWidget *user = gtk_combo_box_text_new();
+    gtk_widget_set_name(user, "all-user");
+    GtkWidget *permissions = entry_new("", "all-permissions");
+    gtk_entry_set_placeholder_text(GTK_ENTRY(permissions), "0644 or 4755");
+    const char *ids[] = { "all-enable-group", "all-enable-user", "all-enable-permissions" };
+    GtkWidget *inputs[] = { group, user, permissions };
+    const char *labels[] = { "_Group:", "_User:", "_Permissions:" };
+    for (guint i = 0; i < 3; i++) {
+        GtkWidget *check = optional_row(extra, 2, i, labels[i], inputs[i], ids[i]);
+        const char *props[] = { "plus-group", "plus-user", "plus-permissions" };
+        const char *enabled[] = { "plus-group-enabled", "plus-user-enabled", "plus-permissions-enabled" };
+        bind_control(w, props[i], inputs[i], i < 2 ? "active-id" : "text");
+        bind_control(w, enabled[i], check, "active");
+        if (i < 2) {
+            GList *cells=gtk_cell_layout_get_cells(GTK_CELL_LAYOUT(inputs[i]));
+            for(GList *cell=cells;cell;cell=cell->next)
+                if(GTK_IS_CELL_RENDERER_TEXT(cell->data)) g_object_set(cell->data,"ellipsize",PANGO_ELLIPSIZE_END,"max-width-chars",18,NULL);
+            g_list_free(cells);
+            cf_accounts_register(GTK_COMBO_BOX_TEXT(inputs[i]), check, i == 1);
+        }
+    }
+    g_object_set_data(G_OBJECT(extra), "cf-group", group);
+    g_object_set_data(G_OBJECT(extra), "cf-user", user);
+    if (expanded) cf_accounts_load();
+    GtkWidget *hidden = optional_row(extra, 2, 3, "No _Hidden files", NULL, "all-no-hidden");
+    bind_control(w, "plus-no-hidden", hidden, "active");
+    GtkWidget *traversal = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
     GtkWidget *stay = gtk_check_button_new_with_label("Stay on this filesystem");
     gtk_widget_set_name(stay, "all-stay-on-filesystem");
     bind_control(w, "stay-on-filesystem", stay, "active");
-    gtk_grid_attach(GTK_GRID(grid), stay, 0, 6, 3, 1);
+    GtkWidget *follow = gtk_check_button_new_with_label("Follow symbolic links");
+    gtk_widget_set_name(follow, "all-follow-symlinks");
+    bind_control(w, "follow-symlinks", follow, "active");
     w->admin_search = gtk_check_button_new_with_label("Allow admin search");
     gtk_widget_set_name(w->admin_search, "all-admin-search");
     gtk_widget_set_tooltip_text(w->admin_search,
         "Authenticate through Polkit when Find is pressed. Search only; file actions retain this application's permissions.");
-    gtk_grid_attach(GTK_GRID(grid), w->admin_search, 0, 7, 3, 1);
+    gtk_box_pack_start(GTK_BOX(traversal), stay, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(traversal), follow, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(traversal), w->admin_search, FALSE, FALSE, 0);
+    gtk_grid_attach(GTK_GRID(grid), traversal, 0, 6, 3, 1);
     gtk_container_add(GTK_CONTAINER(more), extra);
-    gtk_grid_attach(GTK_GRID(grid), more, 0, 8, 3, 1);
+    gtk_grid_attach(GTK_GRID(grid), more, 0, 7, 3, 1);
     return grid;
 }
 
@@ -362,6 +485,11 @@ static void filter_changed(GObject *form, GParamSpec *spec, gpointer data)
     (void)spec;
     Window *w = data;
     CfCriteriaInput input = cf_search_form_get_input(w->form);
+    int optional_mode; gboolean enabled;
+    g_object_get(w->form, "plus-date-mode", &optional_mode, "plus-date-enabled", &enabled, NULL);
+    gtk_widget_set_sensitive(w->all_recent, enabled && cf_date_mode_relative(optional_mode) &&
+        gtk_expander_get_expanded(GTK_EXPANDER(w->more)) &&
+        gtk_notebook_get_current_page(GTK_NOTEBOOK(w->tabs)) == CF_TAB_PLUS);
     w->updating_bounds = TRUE;
     gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(w->all_after), input.date_mode == CF_DATE_AFTER ||
                                  input.date_mode == CF_DATE_BETWEEN || input.date_mode == CF_DATE_BOUNDS);
@@ -370,7 +498,7 @@ static void filter_changed(GObject *form, GParamSpec *spec, gpointer data)
     w->updating_bounds = FALSE;
     GtkWidget *starts[] = { w->date_start, w->all_date_start };
     GtkWidget *ends[] = { w->date_end, w->all_date_end };
-    GtkWidget *recent[] = { w->recent, w->all_recent };
+    GtkWidget *recent[] = { w->recent, NULL };
     GtkWidget *lower[] = { w->size_start, w->all_size_start };
     GtkWidget *upper[] = { w->size_end, w->all_size_end };
     GtkWidget *units[] = { w->unit, w->all_unit };
@@ -378,7 +506,7 @@ static void filter_changed(GObject *form, GParamSpec *spec, gpointer data)
         gtk_widget_set_sensitive(gtk_widget_get_parent(starts[i]),
                                 input.date_mode == CF_DATE_AFTER || input.date_mode == CF_DATE_BETWEEN || input.date_mode == CF_DATE_BOUNDS);
         gtk_widget_set_sensitive(gtk_widget_get_parent(ends[i]), input.date_mode == CF_DATE_BEFORE || input.date_mode == CF_DATE_BETWEEN || input.date_mode == CF_DATE_BOUNDS);
-        gtk_widget_set_sensitive(recent[i], input.date_mode == CF_DATE_DAYS || input.date_mode == CF_DATE_MONTHS);
+        if (recent[i]) gtk_widget_set_sensitive(recent[i], cf_date_mode_relative(input.date_mode));
         gtk_widget_set_sensitive(lower[i], input.size_mode != CF_SIZE_ALL);
         gtk_widget_set_sensitive(upper[i], input.size_mode == CF_SIZE_BETWEEN);
         gtk_widget_set_sensitive(units[i], input.size_mode != CF_SIZE_ALL);
@@ -442,6 +570,11 @@ static void tab_selected(GtkNotebook *tabs, GtkWidget *page, guint index, gpoint
     Window *w = data;
     gtk_widget_set_sensitive(w->find, !w->search && index != CF_TAB_HELP);
     cf_settings_set_int(w->settings, "Window", "Tab", index);
+    /* switch-page precedes the notebook current-page update. */
+    int mode; gboolean enabled;
+    g_object_get(w->form, "plus-date-mode", &mode, "plus-date-enabled", &enabled, NULL);
+    gtk_widget_set_sensitive(w->all_recent, index == CF_TAB_PLUS && enabled &&
+        cf_date_mode_relative(mode) && gtk_expander_get_expanded(GTK_EXPANDER(w->more)));
 }
 
 static gboolean configured(GtkWidget *widget, GdkEventConfigure *event, gpointer data)
@@ -549,11 +682,12 @@ static void find(GtkButton *button, gpointer data)
     (void)button;
     Window *w = data;
     if (w->search) return;
+    g_autoptr(GDateTime) reference = g_date_time_new_now_local();
     CfCriteriaInput input;
     if (!cf_search_form_effective(w->form, gtk_notebook_get_current_page(GTK_NOTEBOOK(w->tabs)),
                                   gtk_expander_get_expanded(GTK_EXPANDER(w->more)), &input)) return;
     g_autoptr(GError) error = NULL;
-    CfCriteria *criteria = cf_criteria_new(&input, NULL, &error);
+    CfCriteria *criteria = cf_criteria_new(&input, reference, &error);
     if (!criteria) {
         status(w, error->message, NULL);
         return;
@@ -759,9 +893,7 @@ GtkWidget *cf_window_new(GtkApplication *app, GFile *root)
     gtk_notebook_append_page(GTK_NOTEBOOK(w->tabs), location, tab_label("folder", "Name & Location"));
 
     GtkWidget *dates = grid_new();
-    const char *date_modes[] = { "All files", "After date (exclusive)", "Before date (exclusive)",
-        "Between dates (inclusive)", "Previous N days", "Previous N months", "After and before (exclusive)", NULL };
-    w->date_mode = combo(date_modes);
+    w->date_mode = date_mode_combo(FALSE);
     gtk_widget_set_name(w->date_mode, "date-mode");
     gtk_grid_attach(GTK_GRID(dates), date_field_combo(w, "date-field"), 0, 0, 1, 1);
     gtk_grid_attach(GTK_GRID(dates), w->date_mode, 1, 0, 2, 1);
@@ -798,7 +930,7 @@ GtkWidget *cf_window_new(GtkApplication *app, GFile *root)
         { "location", w->location, "text" }, { "name", w->name, "text" },
         { "name-mode", w->name_mode, "active" }, { "case-sensitive", w->case_sensitive, "active" },
         { "recursive", w->recursive, "active" }, { "stay-on-filesystem", w->stay, "active" },
-        { "date-mode", w->date_mode, "active" }, { "date-start", w->date_start, "text" },
+        { "date-start", w->date_start, "text" },
         { "date-end", w->date_end, "text" }, { "recent", w->recent, "text" },
         { "file-type", w->type, "active" }, { "extension", w->extension, "text" },
         { "extension-only", w->extension_only, "active" }, { "size-mode", w->size_mode, "active" },
@@ -813,6 +945,9 @@ GtkWidget *cf_window_new(GtkApplication *app, GFile *root)
     gtk_notebook_append_page(GTK_NOTEBOOK(w->tabs), all_in_one(w), tab_label("view-grid-symbolic", "Find Plus"));
     gtk_notebook_append_page(GTK_NOTEBOOK(w->tabs), cf_help_about_new(), tab_label("help-about-symbolic", "Help/About"));
 
+    bind_date_mode(w, "date-mode", w->date_mode);
+    g_signal_connect(w->form, "notify::plus-date-mode", G_CALLBACK(filter_changed), w);
+    g_signal_connect(w->form, "notify::plus-date-enabled", G_CALLBACK(filter_changed), w);
     g_signal_connect(w->form, "notify::date-mode", G_CALLBACK(filter_changed), w);
     g_signal_connect(w->form, "notify::size-mode", G_CALLBACK(filter_changed), w);
     filter_changed(NULL, NULL, w);

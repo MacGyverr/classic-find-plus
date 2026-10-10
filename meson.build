@@ -7,12 +7,13 @@ add_project_arguments('-DGLIB_VERSION_MIN_REQUIRED=GLIB_VERSION_2_70',
   '-DGLIB_VERSION_MAX_ALLOWED=GLIB_VERSION_2_70', language: 'c')
 configuration = configuration_data()
 configuration.set_quoted('CF_APP_VERSION', meson.project_version())
+configuration.set_quoted('CF_ACCOUNTS_HELPER', get_option('prefix') / get_option('datadir') / 'classic-find-plus/accounts.py')
 configuration.set_quoted('CF_INTEGRATION_HELPER', get_option('prefix') / get_option('datadir') / 'classic-find-plus/integration-manager.py')
 configure_file(output: 'config.h', configuration: configuration)
 inc = include_directories('.', 'include')
-search_sources = files('src/criteria.c', 'src/date-expression.c', 'src/search.c', 'src/admin-protocol.c', 'src/admin-client.c')
+search_sources = files('src/traversal.c', 'src/criteria.c', 'src/date-expression.c', 'src/search.c', 'src/admin-protocol.c', 'src/admin-client.c')
 result_sources = files('src/export-dialog.c', 'src/result-export.c', 'src/metadata.c', 'src/settings.c', 'src/results.c', 'src/results-sync.c', 'src/result-columns.c', 'src/column-preferences.c', 'src/selection.c', 'src/file-operations.c', 'src/result-actions.c')
-ui_sources = files('src/integrations.c', 'src/window-position.c', 'src/search-history.c', 'src/window.c', 'src/preferences.c', 'src/search-form.c', 'src/date-input.c', 'src/date-dialog.c', 'src/help-about.c') + result_sources
+ui_sources = files('src/accounts.c', 'src/integrations.c', 'src/window-position.c', 'src/search-history.c', 'src/window.c', 'src/preferences.c', 'src/search-form.c', 'src/date-input.c', 'src/date-dialog.c', 'src/help-about.c') + result_sources
 artwork_sources = import('gnome').compile_resources('classic-find-plus-resources',
   'data/classic-find-plus.gresource.xml', source_dir: 'data', c_name: 'classic_find_plus')
 # Only generated resource strings exceed ISO C's minimum supported literal length.
@@ -32,7 +33,7 @@ configure_file(input: 'data/privileged/org.classicfind.Plus.Search.service.in',
   install_dir: get_option('datadir') / 'dbus-1/system-services')
 install_data('data/privileged/org.classicfind.Plus.Search.conf', install_dir: get_option('datadir') / 'dbus-1/system.d')
 install_data('data/privileged/org.classicfind.plus.search.policy', install_dir: get_option('datadir') / 'polkit-1/actions')
-install_data('scripts/integration-manager.py', install_dir: get_option('datadir') / 'classic-find-plus')
+install_data('scripts/accounts.py', 'scripts/integration-manager.py', install_dir: get_option('datadir') / 'classic-find-plus')
 integration_files = ['classic-find-plus.nemo_action', 'classic-find-plus-nautilus.py', 'classic-find-plus-caja.py',
   'classic-find-plus.desktop', 'classic-find-plus-thunar.xml', 'classic-find-plus-caja-script.py']
 foreach adapter : integration_files

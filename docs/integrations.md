@@ -70,8 +70,12 @@ Use `nautilus`, `dolphin`, `caja` or `thunar` in place of `nemo`. Source builds 
 `python3 scripts/integration-manager.py ...`; this still modifies only the current user's
 chosen integration and requires CFP on the desktop session's PATH.
 
-Ordinary URI drag-and-drop is separate from menu integration. Nemo/Caja ordinary transfers
-have prior verification; those transfers do not verify privileged destinations.
+The owner reports successful real context-menu launch and ordinary copy/move transfers,
+including destination replacement, in Nemo, Nautilus, Dolphin, Caja and Thunar with the
+preceding release. One intermittent Nemo replacement-copy observation remains unconfirmed;
+Phase 9 does not change integrations or transfer negotiation.
+
+Ordinary URI drag-and-drop is separate from menu integration; those transfers do not verify privileged destinations.
 Administrative destinations depend on the receiving manager/backend and session (GVfs/Polkit
 for some GTK managers, KIO for KDE). Showing a protected search result grants no transfer
 permission. GTK/KDE and Wayland drag interoperability varies. New adapter lifecycle/API/argv
@@ -79,8 +83,7 @@ fixtures are tested. Caja 1.26's background right-click Scripts entry and produc
 were also verified with the Ubuntu 22.04 SDK in a disposable user/mount namespace, including
 the correct special-character folder and Look in value. That GUI fixture used namespace UID 0
 mapped to the ordinary host user, an explicit --allow-root override and a disposable root
-profile; it does not verify host-root desktop authentication. Other managers' new menu GUIs
-remain provisional.
+profile; it does not verify host-root desktop authentication. The owner's five-manager confirmation is separate from this namespace fixture.
 
 Mechanisms follow upstream [Nautilus Python](https://gnome.pages.gitlab.gnome.org/nautilus-python/class-nautilus-python-menu-provider.html),
 [Caja Python](https://github.com/mate-desktop/python-caja),

@@ -8,7 +8,7 @@
 
 <img width="758" height="624" alt="advanced" src="https://github.com/user-attachments/assets/695cbb1c-bb1f-4c93-b938-6910afbc4408" />
 
-**Version 1.0.2 release candidate** — a native Linux file and folder search application, inspired by the classic
+**Version 1.0.4** — a native Linux file and folder search application, inspired by the classic
 Find dialog and styled by your GTK3 desktop theme. Created by MacGyverr / ChatGPT.
 [GitHub project](https://github.com/MacGyverr/classic-find-plus) · GPL-3.0-or-later.
 
@@ -26,7 +26,7 @@ been tested on those distributions. No Windows-native application is provided.
 ## Install a Debian package
 
 Download the DEB for **your distribution and architecture** from the project's Releases page
-when available. Building 1.0.2 does not imply its DEB has been published.
+when available. Building 1.0.4 does not imply its DEB has been published.
 Mint 21.3 uses Ubuntu 22.04 (jammy) libraries; a DEB built on newer Debian may not work there.
 Double-click the downloaded DEB to use your graphical package installer, or run:
 
@@ -72,7 +72,7 @@ cannot be supported just by adding a compiler.
 
 Runtime: GTK3/GLib and their normal system dependencies, a desktop icon theme and PNG loader.
 SVG icons in system themes also require the distribution's SVG pixbuf loader (for example
-`librsvg2-common` on Debian/Mint). Python 3 supports the integration manager. D-Bus, Polkit and an active desktop authentication
+`librsvg2-common` on Debian/Mint). Python 3 supports integration management and asynchronous NSS account enumeration. D-Bus, Polkit and an active desktop authentication
 agent enable administrator searching; GVfs/KIO backend support governs administrative transfers.
 Nemo and other managers are optional. Ordinary local searching does not need the privileged service.
 See [administrator setup](docs/admin-search.md) and [optional adapter dependencies](docs/integrations.md).
@@ -156,7 +156,7 @@ Fresh installations enable no file-manager menus. Open **Help/About → File Man
 Refresh, Install the desired adapter, then Enable it. Disable/Remove affects only owned CFP
 entries. Optional packages are reported and never installed silently. Existing Nemo integration
 and saved user choices survive upgrades. Menus pass the selected folder ahead of saved Look in.
-Nautilus/Caja use native Python extensions, Dolphin a service menu, Thunar a safe custom action.
+Nautilus uses a native Python extension, Caja its Scripts menu, Dolphin a service menu, Thunar a safe custom action.
 Restart/reload requirements and CLI equivalents are in [integration instructions](docs/integrations.md).
 
 Linux Mint workflow:
@@ -182,6 +182,30 @@ Find Plus Exclude shares that mode/case: `*.mp4` with `/movies` skips matching d
 subtrees; `*.txt` with `backup` excludes matching files and directories. Other tabs ignore it.
 Dates accept fixed/relative calendar expressions; Created falls back to Modified only when
 birth metadata is unavailable. Containing Text is a disabled placeholder, not content search.
+
+Find Plus has a compact two-column **More Filters** section. Check each optional filter to
+activate it: File type, Extension, Date mode, Group, User and exact Permissions.
+**No Hidden files** skips dot-prefixed files and prunes hidden directory subtrees. Group/User
+lists include root and service accounts; matching uses numeric ownership. Permissions accepts
+three/four octal digits, including special bits (for example `644`, `4755`, `1777`).
+Collapsing More Filters resets all its values and checkboxes; every new window starts with
+them off, even if the section opens expanded. Main criteria, other tabs and running searches
+retain their values. Extension combines with File name and needs no second checkbox.
+
+**Date Mode** offers Any date or Last N minutes/hours/days/months. Previous N enables
+itself for an active relative mode; enter a positive whole number. Main After/Before and
+Last N combine with AND, using the same Modified/Created/Accessed field. One reference
+instant is captured when Find is pressed, before authentication, and both interval edges
+are inclusive. Minutes/hours/days are elapsed time (a day is 24 hours); months use calendar
+subtraction with month-end clamping. Date Modified retains Any, After, Before, Between,
+After and before, plus all four Last N modes. Inactive N is ignored; disjoint date bounds
+show a validation error. [Limits and examples](docs/search.md#rolling-relative-time).
+Accessed depends on relatime/noatime mount options.
+
+**Follow symbolic links** is saved independently of More Filters and defaults off. When on,
+directory identities prevent cycles/duplicate descent; Stay on this filesystem checks actual
+targets. Excluded/hidden target subtrees remain pruned. Link rows retain link metadata and
+children retain the chosen alias path. [Traversal and filter details](docs/search.md).
 
 Right-click a result header to show columns, drag headers to reorder, and click to sort.
 Bytes and Bits are initially hidden, exact comma-grouped integers; Bits is bytes times eight,
@@ -219,7 +243,8 @@ architectures are untested. The admin syscall guard supports Linux x86-64/AArch6
 is unverified and other worker architectures refuse startup. No content search, recursive
 folder-size calculation or guaranteed remote-backend authentication is provided. Searches keep matching rows
 in memory; exports briefly snapshot visible data. Backend calls can delay cancellation.
-Directory symlinks are not followed below the selected root.
+Directory symlinks are followed only when Follow symbolic links is enabled; safe following
+requires native local/mounted paths with stable directory identities. See docs/search.md.
 
 No screenshots are bundled in this release; application artwork is included with permission.
 The complete license is [LICENSE](LICENSE); artwork/system-library notices are in

@@ -15,24 +15,34 @@ static gboolean bounded(GVariant *value, const char *type, gsize limit)
 GVariant *cf_admin_criteria_encode(const CfCriteria *c)
 {
     return g_variant_new(CF_ADMIN_CRITERIA_TYPE,
-        c->input_name, c->input_exclude, c->input_extension,
+        CF_ADMIN_PROTOCOL_VERSION, c->input_name, c->input_exclude, c->input_extension,
         c->name_mode, c->type, c->date_field, c->size_mode,
         c->size_start, c->size_end, c->date_start, c->date_end,
         c->has_start, c->has_end, c->case_sensitive, c->extension_only,
-        c->recursive, c->stay_on_filesystem);
+        c->recursive, c->stay_on_filesystem, c->has_uid, c->has_gid, c->has_permissions,
+        c->uid, c->gid, c->permissions, c->no_hidden, c->follow_symlinks);
 }
 CfCriteria *cf_admin_criteria_decode(GVariant *value, GError **error)
 {
     if (!bounded(value, CF_ADMIN_CRITERIA_TYPE, 100 * 1024)) { invalid(error); return NULL; }
     const char *name, *exclude, *extension;
-    guint mode, type, field, size_mode;
+    guint version, mode, type, field, size_mode, uid, gid, permissions;
+    gboolean has_uid, has_gid, has_permissions, hidden, follow;
     guint64 lower, upper;
     gint64 start, end;
     gboolean has_start, has_end, sensitive, extension_only, recursive, stay;
-    g_variant_get(value, "(&s&s&suuuuttxxbbbbbb)", &name, &exclude, &extension,
+    g_variant_get(value, "(u&s&s&suuuuttxxbbbbbbbbbuuubb)", &version, &name, &exclude, &extension,
         &mode, &type, &field, &size_mode, &lower, &upper, &start, &end,
-        &has_start, &has_end, &sensitive, &extension_only, &recursive, &stay);
-    if (mode > CF_NAME_REGEX || type > CF_TYPE_TEXT || field > CF_DATE_ACCESSED || size_mode > CF_SIZE_EQUAL ||
+        &has_start, &has_end, &sensitive, &extension_only, &recursive, &stay,
+        &has_uid, &has_gid, &has_permissions, &uid, &gid, &permissions, &hidden, &follow);
+    if (version != CF_ADMIN_PROTOCOL_VERSION) {
+        g_set_error_literal(error,G_IO_ERROR,G_IO_ERROR_INVALID_DATA,
+            "Administrator search protocol version mismatch; restart CFP after updating its package.");
+        return NULL;
+    }
+    if ((has_uid && uid == G_MAXUINT32) ||
+        (has_gid && gid == G_MAXUINT32) || permissions > 07777 ||
+        (!has_uid && uid) || (!has_gid && gid) || (!has_permissions && permissions) || mode > CF_NAME_REGEX || type > CF_TYPE_TEXT || field > CF_DATE_ACCESSED || size_mode > CF_SIZE_EQUAL ||
         start < G_GINT64_CONSTANT(-62135596800000000) || end < G_GINT64_CONSTANT(-62135596800000000) ||
         start > G_GINT64_CONSTANT(253402300800000000) || end > G_GINT64_CONSTANT(253402300800000000) ||
         (has_start && has_end && start >= end)) { invalid(error); return NULL; }
@@ -43,7 +53,10 @@ CfCriteria *cf_admin_criteria_decode(GVariant *value, GError **error)
         .size_start = size_start, .size_end = size_end, .case_sensitive = sensitive,
         .extension_only = extension_only, .recursive = recursive, .stay_on_filesystem = stay };
     CfCriteria *c = cf_criteria_new(&input, NULL, error);
-    if (c) { c->date_start = start; c->date_end = end; c->has_start = has_start; c->has_end = has_end; }
+    if (c) {
+        c->has_uid = has_uid; c->has_gid = has_gid; c->has_permissions = has_permissions;
+        c->uid = uid; c->gid = gid; c->permissions = permissions; c->no_hidden = hidden; c->follow_symlinks = follow;
+        c->date_start = start; c->date_end = end; c->has_start = has_start; c->has_end = has_end; }
     return c;
 }
 GFile *cf_admin_root(const char *uri, GError **error)

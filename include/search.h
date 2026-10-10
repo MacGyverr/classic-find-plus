@@ -3,24 +3,27 @@
 
 typedef enum { CF_NAME_AUTO, CF_NAME_EXACT, CF_NAME_REGEX } CfNameMode;
 typedef enum { CF_DATE_ALL, CF_DATE_AFTER, CF_DATE_BEFORE, CF_DATE_BETWEEN,
-               CF_DATE_DAYS, CF_DATE_MONTHS, CF_DATE_BOUNDS } CfDateMode;
+               CF_DATE_DAYS, CF_DATE_MONTHS, CF_DATE_BOUNDS, CF_DATE_MINUTES, CF_DATE_HOURS } CfDateMode;
 typedef enum { CF_DATE_MODIFIED, CF_DATE_CREATED, CF_DATE_ACCESSED } CfDateField;
 typedef enum { CF_SIZE_ALL, CF_SIZE_GREATER, CF_SIZE_LESS, CF_SIZE_BETWEEN, CF_SIZE_EQUAL } CfSizeMode;
 typedef enum { CF_TYPE_ANY, CF_TYPE_FILES, CF_TYPE_FOLDERS, CF_TYPE_IMAGE,
                CF_TYPE_AUDIO, CF_TYPE_VIDEO, CF_TYPE_TEXT } CfType;
 typedef struct {
     const char *name, *exclude, *extension, *date_start, *date_end, *recent,
-               *size_start, *size_end;
+               *size_start, *size_end, *user, *group, *permissions;
     CfNameMode name_mode;
-    CfDateMode date_mode;
+    CfDateMode date_mode, relative_mode; /* Optional AND interval; ALL means inactive. */
+    const char *relative_recent;
     CfDateField date_field;
     CfSizeMode size_mode;
     CfType type;
     guint size_unit; /* 0: bytes, 1: KiB, 2: MiB, 3: GiB */
-    gboolean case_sensitive, extension_only, recursive, stay_on_filesystem;
+    gboolean case_sensitive, extension_only, recursive, stay_on_filesystem,
+             user_enabled, group_enabled, permissions_enabled, no_hidden, follow_symlinks;
 } CfCriteriaInput;
 typedef struct _CfCriteria CfCriteria;
 CfCriteria *cf_criteria_new(const CfCriteriaInput *input, GDateTime *now, GError **error);
+gboolean cf_date_mode_relative(CfDateMode mode);
 void cf_criteria_free(CfCriteria *criteria);
 CfCriteria *cf_criteria_copy(const CfCriteria *criteria);
 /* Exclusion ignores inclusion/date/size/type filters; safe before directory descent. */

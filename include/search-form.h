@@ -17,3 +17,6 @@ gboolean cf_search_form_effective(CfSearchForm *form, int tab, gboolean more_exp
 
 void cf_search_form_restore(CfSearchForm *form, CfSettings *settings);
 void cf_search_form_track(CfSearchForm *form, CfSettings *settings);
+
+/* Reset only ephemeral Find Plus optional filters; never shared/tab/global values. */
+void cf_search_form_reset_optional(CfSearchForm *form);
