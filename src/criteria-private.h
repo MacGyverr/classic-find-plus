@@ -1,11 +1,16 @@
 #pragma once
 #include "search.h"
+typedef struct {
+    char *text;
+    GPatternSpec *pattern;
+    GRegex *regex;
+    gboolean directories;
+} CfExcludeRule;
+
 struct _CfCriteria {
     char *input_name, *input_exclude, *input_extension;
-    char *name, *extension, *exclude;
-    GPatternSpec *exclude_pattern;
-    GRegex *exclude_regex;
-    gboolean exclude_directories;
+    char *name, *extension;
+    GPtrArray *exclusions; /* Immutable compiled rules; shared by captured copies. */
     GPatternSpec *pattern;
     GRegex *regex;
     CfNameMode name_mode;

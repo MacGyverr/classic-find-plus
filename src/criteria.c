@@ -125,18 +125,69 @@ static gboolean match_name(const char *text, GPatternSpec *pattern, GRegex *rege
     if (mode == CF_NAME_EXACT) return !strcmp(text, target);
     return strstr(target, text) != NULL;
 }
+static void exclusion_free(gpointer data)
+{
+    CfExcludeRule *rule = data;
+    g_free(rule->text);
+    if (rule->pattern) g_pattern_spec_free(rule->pattern);
+    if (rule->regex) g_regex_unref(rule->regex);
+    g_free(rule);
+}
+static gboolean exclusion_add(CfCriteria *c, const char *text, GError **error)
+{
+    if (!*text) return TRUE; /* Spaces are significant; do not strip. */
+    /* Derived from input character bound: each nonempty rule needs one character
+     * and each separator another. Regex always uses one rule. */
+    if (c->exclusions->len >= (CF_TEXT_LIMIT + 1) / 2)
+        return invalid(error, "Too many exclusions for the supported input length.");
+    CfExcludeRule *rule = g_new0(CfExcludeRule, 1);
+    rule->directories = *text == '/';
+    if (rule->directories && !*++text) {
+        exclusion_free(rule);
+        return invalid(error, "Exclude needs a directory-component pattern after /.");
+    }
+    if (!compile_name(text, c->name_mode, c->case_sensitive,
+                      &rule->text, &rule->pattern, &rule->regex, error)) {
+        exclusion_free(rule);
+        g_prefix_error(error, "Exclude: ");
+        return FALSE;
+    }
+    g_ptr_array_add(c->exclusions, rule);
+    return TRUE;
+}
+static gboolean compile_exclusions(CfCriteria *c, const char *raw, GError **error)
+{
+    c->exclusions = g_ptr_array_new_with_free_func(exclusion_free);
+    if (c->name_mode == CF_NAME_REGEX) return exclusion_add(c, raw, error);
+    g_autoptr(GString) rule = g_string_sized_new(strlen(raw));
+    for (const char *p = raw; ; p++) {
+        if (*p == '\\' && (p[1] == '|' || p[1] == '\\')) {
+            g_string_append_c(rule, *++p);
+        } else if (*p == '|' || !*p) {
+            if (!exclusion_add(c, rule->str, error)) return FALSE;
+            if (!*p) break;
+            g_string_truncate(rule, 0);
+        } else g_string_append_c(rule, *p);
+    }
+    return TRUE;
+}
+
 static gboolean excludes_name(const CfCriteria *c, const char *display, const char *folded, gboolean directory)
 {
-    if (!c->exclude || !*c->exclude || (c->exclude_directories && !directory)) return FALSE;
-    return match_name(c->exclude, c->exclude_pattern, c->exclude_regex, c->name_mode,
-        c->exclude_regex ? display : folded, c->exclude_directories);
+    for (guint i = 0; i < c->exclusions->len; i++) {
+        const CfExcludeRule *rule = g_ptr_array_index(c->exclusions, i);
+        if (rule->directories && !directory) continue;
+        if (match_name(rule->text, rule->pattern, rule->regex, c->name_mode,
+                       rule->regex ? display : folded, rule->directories)) return TRUE;
+    }
+    return FALSE;
 }
 gboolean cf_criteria_excludes(const CfCriteria *c, GFileInfo *info)
 {
     const char *raw = g_file_info_get_name(info);
     if (!raw) return FALSE;
     if (c->no_hidden && *raw == '.') return TRUE;
-    if (!c->exclude || !*c->exclude) return FALSE;
+    if (!c->exclusions->len) return FALSE;
     g_autofree char *display = g_filename_display_name(raw);
     g_autofree char *folded = c->case_sensitive ? NULL : g_utf8_casefold(display, -1);
     return excludes_name(c, display, folded ? folded : display,
@@ -149,9 +200,7 @@ void cf_criteria_free(CfCriteria *c)
     g_free(c->input_name); g_free(c->input_exclude); g_free(c->input_extension);
     g_free(c->name);
     g_free(c->extension);
-    g_free(c->exclude);
-    if (c->exclude_pattern) g_pattern_spec_free(c->exclude_pattern);
-    if (c->exclude_regex) g_regex_unref(c->exclude_regex);
+    if (c->exclusions) g_ptr_array_unref(c->exclusions);
     if (c->pattern) g_pattern_spec_free(c->pattern);
     if (c->regex) g_regex_unref(c->regex);
     g_free(c);
@@ -166,9 +215,7 @@ CfCriteria *cf_criteria_copy(const CfCriteria *source)
     copy->input_extension = g_strdup(source->input_extension);
     copy->name = g_strdup(source->name);
     copy->extension = g_strdup(source->extension);
-    copy->exclude = g_strdup(source->exclude);
-    copy->exclude_pattern = source->exclude_pattern ? g_pattern_spec_copy(source->exclude_pattern) : NULL;
-    copy->exclude_regex = source->exclude_regex ? g_regex_ref(source->exclude_regex) : NULL;
+    copy->exclusions = g_ptr_array_ref(source->exclusions);
     copy->pattern = source->pattern ? g_pattern_spec_copy(source->pattern) : NULL;
     copy->regex = source->regex ? g_regex_ref(source->regex) : NULL;
     return copy;
@@ -204,14 +251,7 @@ CfCriteria *cf_criteria_new(const CfCriteriaInput *in, GDateTime *now, GError **
     c->extension = in->case_sensitive ? g_strdup(extension) : g_utf8_casefold(extension, -1);
     c->name_mode = in->name_mode;
     if (!compile_name(name, c->name_mode, c->case_sensitive, &c->name, &c->pattern, &c->regex, error)) return NULL;
-    c->exclude_directories = *exclude == '/';
-    if (c->exclude_directories && !*++exclude) {
-        invalid(error, "Exclude needs a directory-component pattern after /."); return NULL;
-    }
-    if (*exclude && !compile_name(exclude, c->name_mode, c->case_sensitive,
-        &c->exclude, &c->exclude_pattern, &c->exclude_regex, error)) {
-        g_prefix_error(error, "Exclude: "); return NULL;
-    }
+    if (!compile_exclusions(c, exclude, error)) return NULL;
     c->has_uid = in->user_enabled; c->has_gid = in->group_enabled;
     c->has_permissions = in->permissions_enabled;
     if (c->has_uid && !account_id(in->user, &c->uid, error)) return NULL;

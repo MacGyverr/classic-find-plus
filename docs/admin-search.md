@@ -4,7 +4,7 @@ Find Plus has an **Allow admin search** checkbox above More Filters. It starts u
 on every launch and is never saved. Checking it does not authenticate. Find
 captures one reference instant, validates the effective criteria and resolves relative dates,
 then requests Polkit authentication. Main date bounds AND Last N minutes/hours/days/months
-are intersected before IPC; protocol v2 transmits exact absolute microsecond cutoffs, so
+are intersected before IPC; protocol v3 transmits exact absolute microsecond cutoffs, so
 authentication delays never shift the interval. No new date-mode enum is sent to the worker.
 Other search tabs ignore the checkbox. Uncheck it for ordinary searches. A denied, canceled
 or unavailable authorization ends that search with an error; there is no ordinary fallback.
@@ -13,7 +13,7 @@ The status distinguishes administrator searches. Stop/Esc and closing the window
 The GTK application stays your regular user. A temporary system D-Bus worker runs as root,
 using the same scanner and all functional filename, RegEx, exclusion/pruning, type/MIME,
 extension, size, date, numeric UID/GID, exact Unix permissions, hidden pruning, safe symlink
-following, recursion and filesystem filters. Requests use schema version 2; mismatched GUI/worker
+following, recursion and filesystem filters. Requests use schema version 3; mismatched GUI/worker
 versions fail rather than dropping filters. Restart CFP after package upgrades. It accepts local `file:///` locations,
 including mounted filesystems, rather than remote/admin/GVfs URI credentials. Mount a remote
 filesystem normally first if appropriate. The selected root may be a directory symlink;
@@ -102,3 +102,8 @@ data have separate `classic-find-plus-administrator` XDG roots (for example
 symlink, wrong-owner or group/world-writable profile directories are refused. Ordinary-user
 preferences and cache are not reused. This override is separate from the safer search-only
 checkbox, which keeps file operations under ordinary permissions.
+
+Protocol v3 retains the existing tuple shape and sends raw Exclude text/matching mode.
+The shared criteria parser supports non-RegEx OR rules identically in both processes;
+RegEx remains one expression. The version change prevents silent mixed-version exclusion
+behavior. Restart CFP after upgrading; v2 peers report a protocol mismatch.

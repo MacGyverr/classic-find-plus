@@ -1,20 +1,37 @@
 # Classic Find Plus
 
-<img width="1616" height="909" alt="find-plus" src="https://github.com/user-attachments/assets/eec0f788-6da8-4c00-b219-103eac0315f7" />
+<img width="1518" height="1049" alt="find-plus" src="https://github.com/user-attachments/assets/421cba10-afb0-402b-a8c0-1b21582c639b" />
+
+Example of a Find Plus normal search.
+
+
+<img width="1521" height="1053" alt="find-plus2" src="https://github.com/user-attachments/assets/93e56d66-e61b-400e-97b8-0c0035f0e6ef" />
+
+And a Find Plus "Admin" search.
+
 
 <img width="755" height="624" alt="name" src="https://github.com/user-attachments/assets/77b30b42-4f96-40ed-984f-ea4b44a5df83" />
 
+Windows 98 style Name search.
+
+
 <img width="759" height="621" alt="date" src="https://github.com/user-attachments/assets/730cb725-4ed4-4699-b77a-8d680503376d" />
+
+Windows 98 style Date search.
+
 
 <img width="758" height="624" alt="advanced" src="https://github.com/user-attachments/assets/695cbb1c-bb1f-4c93-b938-6910afbc4408" />
 
-**Version 1.0.4** — a native Linux file and folder search application, inspired by the classic
+Windows 98 style Advanced search.
+
+
+**Version 1.0.5** — a native Linux file and folder search application, inspired by the classic
 Find dialog and styled by your GTK3 desktop theme. Created by MacGyverr / ChatGPT.
 [GitHub project](https://github.com/MacGyverr/classic-find-plus) · GPL-3.0-or-later.
 
 Search by filename, extension, type, size and modified/created/accessed date. Four search tabs
 share saved values, and Help/About explains patterns and shortcuts. Find Plus combines filters
-and offers one Exclude expression that skips matching directories before entering them.
+and offers an Exclude field with OR rules that skip matching directories before entering them.
 Results support fifteen configurable columns, exact Bytes/Bits, sorting, file actions,
 multi-selection, drag-and-drop into Nemo, and CSV or tab-delimited TXT export.
 
@@ -26,7 +43,7 @@ been tested on those distributions. No Windows-native application is provided.
 ## Install a Debian package
 
 Download the DEB for **your distribution and architecture** from the project's Releases page
-when available. Building 1.0.4 does not imply its DEB has been published.
+when available. Building 1.0.5 does not imply its DEB has been published.
 Mint 21.3 uses Ubuntu 22.04 (jammy) libraries; a DEB built on newer Debian may not work there.
 Double-click the downloaded DEB to use your graphical package installer, or run:
 
@@ -180,6 +197,14 @@ GLib Perl-compatible expressions; `^report-[0-9]{4}\.txt$` matches `report-2026.
 Aa controls case sensitivity. Invalid active criteria leave existing results intact.
 Find Plus Exclude shares that mode/case: `*.mp4` with `/movies` skips matching directory
 subtrees; `*.txt` with `backup` excludes matching files and directories. Other tabs ignore it.
+In Partial / wildcard and Exact name modes, separate Exclude rules with `|`:
+`/Movies|/Pictures|cache`, `/backup|*.tmp|*.bak`, or `/My Movies|old files`.
+Any matching rule excludes a file/directory; a leading `/` targets directories and skips
+all descendants before enumeration. Use `\|` for a literal pipe (`file\|old|cache`) and
+`\\` for a literal backslash; other backslashes, colons and spaces remain literal.
+Empty terms are ignored. In RegEx mode the entire field stays one native expression,
+for example `(?:Movies|Pictures)|cache`; its escapes and alternation are not rewritten.
+[Exclusion rules and examples](docs/exclusion.md).
 Dates accept fixed/relative calendar expressions; Created falls back to Modified only when
 birth metadata is unavailable. Containing Text is a disabled placeholder, not content search.
 

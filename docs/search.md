@@ -34,7 +34,10 @@
 
 ## Find Plus exclusions
 
-One saved Exclude expression shares filename mode and case, but applies only on Find Plus.
+One saved Exclude field shares filename mode and case, but applies only on Find Plus.
+Non-RegEx modes OR rules separated by unescaped |; \| is a literal pipe and \\ a literal
+backslash. Empty rules are ignored; spaces and colons remain significant. RegEx treats
+the whole raw field as one expression with native alternation, without custom parsing.
 Ordinary expressions match files and directories; a leading / targets directory components.
 Literal /new uses a prefix; wildcard/RegEx patterns retain their semantics. Matching directories
 are skipped before enumeration, with the selected root exempt. Follow symbolic links also

@@ -316,7 +316,7 @@ static GtkWidget *all_in_one(Window *w)
 
     GtkWidget *exclude = entry_new("", "all-exclude");
     bind_control(w, "exclude", exclude, "text");
-    gtk_widget_set_tooltip_text(exclude, "One exclusion; / targets directory components. Matching directories are not searched.");
+    gtk_widget_set_tooltip_text(exclude, "Use | for OR exclusions; \\| is a literal pipe. / targets directories. RegEx uses one native expression.");
     field(grid, "_Exclude:", exclude, 1);
 
     GtkWidget *containing = entry_new("", "containing-text");

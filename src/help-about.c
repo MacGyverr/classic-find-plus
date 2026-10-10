@@ -52,13 +52,15 @@ GtkWidget *cf_help_about_new(void)
         "If you enter * or ?, the pattern matches the whole filename. * means any number of characters; ? means one character.\n"
         "Examples: *.txt finds text filenames; report* finds names beginning with report; "
         "h?ll0.txt matches hell0.txt or hall0.txt (the final 0 is a digit).");
-    paragraph(GTK_BOX(box), "help-exclude", "Exclude is active only in Find Plus, including when More Filters is collapsed. Enter one expression; empty disables it. "
-        "An ordinary expression matches filenames and directories; matching directories and all descendants are skipped before enumeration. "
-        "A leading / selects directory components anywhere below the search root, not an absolute path or RegEx delimiter. "
-        "Literal /movies skips movies and movies_old; /new skips newshows but not brandnew, including in Exact name mode. "
-        "Wildcard and RegEx patterns keep their usual semantics after the slash. Matching shares filename mode and Aa case sensitivity, always against the full component name. "
-        "Example: File name *.mp4, Exclude /movies. Example: File name *.txt, Exclude backup (Partial / wildcard mode). "
-        "Expressions are never split at semicolons. The selected root itself is exempt; symbolic links require Follow enabled; resolved excluded target subtrees remain pruned. Other tabs retain but ignore Exclude.");
+    paragraph(GTK_BOX(box), "help-exclude", "Exclude is active only in Find Plus, including when More Filters is collapsed. "
+        "In Partial / wildcard and Exact name modes, use | to separate multiple exclusions. Any matching expression excludes the file or directory. Matching directories and their subfolders are skipped before enumeration. "
+        "Examples: /Movies|/Pictures|cache, /backup|*.tmp|*.bak, /My Movies|old files. "
+        "A leading / targets directory components anywhere below the search root, not an absolute path or regex delimiter. Literal /new skips newshows but not brandnew, including in Exact name mode. "
+        "Each rule keeps its own directory-only or file/directory behavior. Wildcards match whole component names; plain text uses the selected partial/exact rules. "
+        "Non-RegEx escapes: \\| matches a literal pipe; \\\\ represents a literal backslash. Example: file\\|old|cache matches file|old or cache. Other backslashes are preserved. "
+        "Spaces (including leading/trailing spaces), colons and semicolons are ordinary characters. Empty terms are ignored; ||| disables non-RegEx exclusion. Aa controls case sensitivity. "
+        "In RegEx mode the whole field is one unchanged expression using native | alternation; it is never custom-split or unescaped. Examples: (?:Movies|Pictures)|cache, file\\|old, file:old. "
+        "The selected root itself is exempt; symbolic links require Follow enabled and resolved excluded target subtrees remain pruned. Other tabs retain but ignore Exclude. Raw text is saved unchanged across modes.");
     paragraph(GTK_BOX(box), "help-exact", "Exact name: matches the whole filename literally, including any * or ? characters.");
     paragraph(GTK_BOX(box), "help-regex", "RegEx: uses GLib's Perl-compatible regular expressions. "
         "Matches may occur anywhere in a filename; use ^ and $ to require the beginning and end. "

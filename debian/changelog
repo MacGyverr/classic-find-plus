@@ -1,3 +1,11 @@
+classic-find-plus (1.0.5-1) unstable; urgency=medium
+
+  * Add non-RegEx OR exclusions with pipe/backslash escaping and significant spaces.
+  * Share compiled rules across traversal, synchronization and administrator searches.
+  * Preserve native RegEx parsing; version worker semantics and update usage help.
+
+ -- MacGyverr / ChatGPT <classic-find-plus@localhost>  Sat, 10 Oct 2026 16:00:00 -0700
+
 classic-find-plus (1.0.4-1) unstable; urgency=medium
 
   * Refine relative date modes, dependent N input and checked rolling intervals.

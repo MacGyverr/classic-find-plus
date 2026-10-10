@@ -1,4 +1,4 @@
-Classic Find Plus 1.0.4
+Classic Find Plus 1.0.5
 Created by MacGyverr / ChatGPT. GPL-3.0-or-later; see LICENSE and THIRD_PARTY.md.
 Project: https://github.com/MacGyverr/classic-find-plus
 Administrator search and the explicit root GUI work on the owner's Linux Mint 21.3 desktop.
@@ -85,3 +85,10 @@ months use calendar subtraction with month-end clamping. Date Modified keeps all
 existing range modes and adds minutes/hours. Accessed depends on relatime/noatime.
 Created filtering falls back to Modified only if birth data is absent. See docs/search.md
 for dynamic calendar limits, examples and nonoverlapping-bound validation.
+
+Exclude (non-RegEx): use | for OR, e.g. /Movies|/Pictures|cache or /backup|*.tmp|*.bak.
+A leading / targets directories; matching subtrees are skipped before enumeration.
+Use \| for a literal pipe and \\ for a literal backslash. Other backslashes, spaces and
+colons remain literal. Empty terms are ignored. RegEx uses the whole raw field as one
+native expression, e.g. (?:Movies|Pictures)|cache; no custom splitting/unescaping.
+Raw text is saved unchanged. See docs/exclusion.md for complete rules and examples.

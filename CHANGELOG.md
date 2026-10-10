@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.5
+
+Find Plus supports OR exclusions separated by unescaped pipes in non-RegEx modes.
+Escaped pipes/backslashes, significant spaces, empty terms and per-rule directory-only
+behavior use a shared compiled matcher; directories are pruned before enumeration.
+RegEx remains one unchanged native expression. Raw settings and administrator parity
+are preserved; protocol v3 prevents silent mixed-version grammar differences.
+Help/About and public usage documentation explain the syntax and escaping.
+
 ## 1.0.4
 
 Find Plus Date Mode now offers Any date and Last N minutes/hours/days/months. Previous N
