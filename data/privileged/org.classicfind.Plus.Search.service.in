@@ -1,0 +1,4 @@
+[D-BUS Service]
+Name=org.classicfind.Plus.Search
+Exec=@WORKER_EXEC@
+User=root

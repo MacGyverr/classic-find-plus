@@ -13,7 +13,8 @@ sh scripts/build-deb.sh
 
 The script performs an incremental Meson release build, stages under a marked build-package
 folder and writes a root-owned archive to dist. It never installs onto the host. The generated
-Depends field comes from dpkg-shlibdeps and actual build libraries, plus runtime icon support.
+Depends field comes from dpkg-shlibdeps and actual build libraries, plus runtime icon support, D-Bus, Polkit and GLib tools. Python 3 is a pre-dependency for
+the narrow legacy Nemo migration maintscripts.
 A Debian-built DEB is not automatically compatible with Ubuntu/Mint; t64 ABI and version
 requirements matter. Mint 21.3 uses Ubuntu 22.04/jammy. Build natively there or use an independently
 prepared compatible SDK; the optional --sysroot mode currently supports amd64 only and expects
@@ -32,3 +33,13 @@ through the same apt install command. Synaptic upgrades need a configured reposi
 the newer package; local files can use the graphical package installer. Removal/purge retains
 per-user settings. Avoid mixing source installs with package-owned paths. No RPM spec is supplied;
 native source builds on RPM distributions are documented without claiming RPM packaging tests.
+
+Phase 8 packages include the non-setuid worker, restrictive Polkit action/system-bus resources,
+and inactive optional adapter templates. Fresh installs activate no menu; upgrades preserve
+owned legacy Nemo content and per-user configuration. Migration hooks honor DPKG_ROOT for
+safe disposable lifecycle tests and remove only unchanged migrated global content. Python
+adapters remain optional; no file manager/desktop stack is automatically installed.
+
+Release source archives use the explicit public allowlist, a versioned top-level directory and
+no private tests/build output. Verify the final matching .sha256 with `sha256sum -c`. Public
+source builds must succeed using both Make and Meson before a release is considered verified.

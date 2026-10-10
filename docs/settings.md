@@ -1,6 +1,6 @@
 # Settings, shared filters and history
 
-Classic Find Plus 1.0.0 stores its configuration at
+Classic Find Plus 1.0.1 stores its configuration at
 `$XDG_CONFIG_HOME/classic-find-plus/settings.ini`, or normally
 `~/.config/classic-find-plus/settings.ini`. GLib supplies the XDG directory. The application creates
 its directory with mode 0700 and atomically replaces the INI file with mode 0600 as the current user.
@@ -102,7 +102,7 @@ list under the same lock; concurrent additions are retained, with newest complet
 Open windows are not automatically changed to match another window's draft or layout. New windows
 load the latest saved preferences; history menus read the latest shared list when opened. Write
 errors are reported to stderr, leave pending changes available for the next edit/search/close, and
-do not change search or transfer behavior. Nothing launches as root or requests new credentials.
+do not change search or transfer behavior. Ordinary result synchronization never launches a privileged worker or requests credentials.
 
 ## Extended metadata and positions
 
@@ -134,3 +134,8 @@ expression 1024, number 32. Oversized stored form/history strings are ignored, n
 new searches. INI input/output is bounded to 1 MiB and regular files; malformed, unreadable,
 symlink/nonregular or oversized files are preserved on save failure. Fix the file or move it aside
 to restore saving. Nothing deletes or rewrites an invalid user configuration automatically.
+
+Allow admin search is transient and never persisted. Full --allow-root operation uses separate
+administrator XDG roots beneath the root passwd home, ignoring inherited user HOME/XDG paths.
+File-manager integration ownership state is separate from criteria preferences; the integration
+manager locks and updates its own fixed-path/hash manifest. See admin-search.md/integrations.md.

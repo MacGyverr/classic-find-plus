@@ -1,5 +1,6 @@
 #include "metadata.h"
 #include "criteria-private.h"
+#include "admin-protocol.h"
 
 #define QUEUE_LIMIT 256
 #define ATTRIBUTES "standard::name,standard::display-name,standard::type,standard::is-symlink,standard::size,standard::icon,standard::content-type,time::created,time::created-usec,time::access,time::access-usec,unix::mode,unix::uid,unix::gid,time::modified,time::modified-usec,id::filesystem,id::file"
@@ -15,6 +16,7 @@ struct _CfSearch {
     guint64 scanned, matched, errors, directories_enumerated, directories_pruned;
     char *first_error;
     gboolean finished;
+    gboolean admin;
 };
 
 typedef struct {
@@ -104,10 +106,34 @@ static void publish(CfSearch *s, GFile *file, GFileInfo *info)
     g_mutex_unlock(&s->mutex);
 }
 
+static void remote_result(CfResult *r, gpointer data)
+{
+    publish(data, r->file, r->info);
+    cf_result_free(r);
+}
+static void remote_stats(const CfSearchStats *stats, gpointer data)
+{
+    CfSearch *s = data;
+    g_mutex_lock(&s->mutex);
+    s->scanned = stats->scanned; s->errors = stats->errors;
+    s->directories_enumerated = stats->directories_enumerated;
+    s->directories_pruned = stats->directories_pruned;
+    if (!s->first_error) s->first_error = g_strdup(stats->first_error);
+    g_mutex_unlock(&s->mutex);
+}
+
 static void worker(gpointer data, gpointer unused)
 {
     (void) unused;
     CfSearch *s = data;
+    if (s->admin) {
+        g_autoptr(GError) remote_error = NULL;
+        cf_admin_client_run(s->root, s->criteria, s->cancel, remote_result, remote_stats, s, &remote_error);
+        if (remote_error) record_error(s, s->root, remote_error->message);
+        g_mutex_lock(&s->mutex); s->finished = TRUE; g_mutex_unlock(&s->mutex);
+        cf_search_unref(s);
+        return;
+    }
     g_autoptr(CfMetadataCache) metadata = cf_metadata_cache_new();
     g_autoptr(GPtrArray) stack = g_ptr_array_new_with_free_func((GDestroyNotify)frame_free);
     g_autoptr(GError) error = NULL;
@@ -180,7 +206,7 @@ done:
     cf_search_unref(s);
 }
 
-CfSearch *cf_search_start(GFile *root, CfCriteria *criteria, GError **error)
+static CfSearch *start(GFile *root, CfCriteria *criteria, gboolean admin, GError **error)
 {
     static GThreadPool *pool;
     static gsize initialized;
@@ -203,6 +229,7 @@ CfSearch *cf_search_start(GFile *root, CfCriteria *criteria, GError **error)
     }
     CfSearch *s = g_new0(CfSearch, 1);
     s->refs = 1;
+    s->admin = admin;
     g_mutex_init(&s->mutex);
     g_cond_init(&s->space);
     g_queue_init(&s->results);
@@ -216,6 +243,15 @@ CfSearch *cf_search_start(GFile *root, CfCriteria *criteria, GError **error)
         return NULL;
     }
     return s;
+}
+
+CfSearch *cf_search_start(GFile *root, CfCriteria *criteria, GError **error)
+{
+    return start(root, criteria, FALSE, error);
+}
+CfSearch *cf_search_start_admin(GFile *root, CfCriteria *criteria, GError **error)
+{
+    return start(root, criteria, TRUE, error);
 }
 
 CfResult *cf_search_pop(CfSearch *s)

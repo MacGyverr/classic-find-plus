@@ -45,6 +45,7 @@ typedef struct {
 } CfSearchStats;
 /* Takes ownership of criteria, including on failure. No filesystem I/O here. */
 CfSearch *cf_search_start(GFile *root, CfCriteria *criteria, GError **error);
+CfSearch *cf_search_start_admin(GFile *root, CfCriteria *criteria, GError **error);
 void cf_search_cancel(CfSearch *search);
 void cf_search_unref(CfSearch *search);
 CfResult *cf_search_pop(CfSearch *search);

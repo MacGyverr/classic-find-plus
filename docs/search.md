@@ -166,3 +166,6 @@ nonmatches. This is a practical bound, not a whole-search deadline. Simplify exp
 
 Remote GIO backends are asked for provider owner/group names. Remote numeric IDs are never
 resolved against the local machine's NSS database; missing remote names remain numeric.
+
+Find Plus Allow admin search uses the same effective filters and captures relative expressions
+before authentication. Other tabs ignore it; see [administrator searches](admin-search.md).

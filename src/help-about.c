@@ -1,5 +1,6 @@
 #include "help-about.h"
 #include "app-info.h"
+#include "integrations.h"
 
 static void paragraph(GtkBox *box, const char *name, const char *text)
 {
@@ -41,6 +42,7 @@ GtkWidget *cf_help_about_new(void)
     gtk_box_pack_start(GTK_BOX(credits), link, FALSE, FALSE, 0);
     gtk_box_pack_start(GTK_BOX(identity), credits, TRUE, TRUE, 0);
     gtk_box_pack_start(GTK_BOX(box), identity, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(box), cf_integrations_new(), FALSE, FALSE, 0);
     paragraph(GTK_BOX(box), "help-start", "Searching: choose a folder, enter a filename or pattern and press Find Now (F5). "
         "Tabs share values: Name searches filenames, Date searches dates, Advanced searches type/extension/size, and Find Plus combines eligible filters. Stop or Esc cancels a search. "
         "Search location, Include Subfolders and Stay on this filesystem are shared on every search tab. "
@@ -79,7 +81,16 @@ GtkWidget *cf_help_about_new(void)
         "Dates require valid calendar values (including leap years); optional time uses 24-hour HH:mm:ss. Adjustments are signed whole numbers within ±1000000; "
         "the evaluated date must remain representable. Incomplete or invalid filters show an error when searching. "
         "RegEx is interpreted only in RegEx mode; matching has work/depth limits, and overly expensive matches can be excluded. Simplify such patterns.");
-    paragraph(GTK_BOX(box), "help-admin-transfers", "Administrative transfers — user-confirmed Linux Mint workflow:\n"
+    paragraph(GTK_BOX(box), "help-admin-search", "Allow admin search: available above More Filters in Find Plus, initially unchecked on every launch and never saved. "
+        "Checking does not authenticate. Find validates filters and requests Polkit permission for a temporary read-only worker; the GUI stays your ordinary user. "
+        "Other tabs ignore the checkbox. Stop/Esc or closing cancels. Denial, cancellation or an unavailable service never falls back to ordinary searching. "
+        "All functional filters apply to local/mounted folders. Status identifies administrator searches. Protected results do not grant permission to open, copy, move or export them. "
+        "A system worker, Polkit authority, active session and authentication agent must be installed/configured. See docs/admin-search.md for limits.");
+    paragraph(GTK_BOX(box), "help-root-mode", "Root CLI: classic-find-plus runs normally; sudo classic-find-plus is refused. "
+        "sudo classic-find-plus --allow-root explicitly runs the whole GUI as root with an Administrator Mode title and startup warning. "
+        "Every feature has root permissions and can change system files. Root uses separate configuration/cache/data under its own home. "
+        "X11/Wayland access may be refused; CFP never changes display access controls. Prefer Allow admin search when only searching needs elevation.");
+    paragraph(GTK_BOX(box), "help-admin-transfers", "Administrative transfers — Linux Mint workflow:\n"
         "1. Open Nemo and press F3 for split panes.\n"
         "2. Navigate one pane to a normal source folder.\n"
         "3. In the other pane press Ctrl+L, enter admin:///opt/ (or another protected destination), and authenticate if prompted.\n"

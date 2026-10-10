@@ -1,3 +1,5 @@
+src/admin-client.c
+src/admin-protocol.c
 src/column-preferences.c
 src/criteria.c
 src/date-dialog.c
@@ -6,6 +8,7 @@ src/date-input.c
 src/export-dialog.c
 src/file-operations.c
 src/help-about.c
+src/integrations.c
 src/location.c
 src/main.c
 src/metadata.c
@@ -15,6 +18,7 @@ src/result-columns.c
 src/result-export.c
 src/results-sync.c
 src/results.c
+src/root-mode.c
 src/search-form.c
 src/search-history.c
 src/search.c

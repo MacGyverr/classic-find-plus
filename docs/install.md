@@ -10,7 +10,10 @@ Both build systems install the same functional files under PREFIX:
 
 - `bin/classic-find-plus`, plus compatibility symlink `bin/classic-find`.
 - `share/applications/org.classicfind.Plus.desktop`.
-- `share/nemo/actions/classic-find-plus.nemo_action`.
+- `libexec/classic-find-plus-search-worker` (0755, never setuid).
+- `share/dbus-1/system-services` activation and `share/dbus-1/system.d` bus policy.
+- `share/polkit-1/actions/org.classicfind.plus.search.policy` (0644).
+- `share/classic-find-plus/integration-manager.py` and inactive `integrations/` templates.
 - `share/icons/hicolor/16x16/apps/classic-find-plus.png`.
 - `share/doc/classic-find-plus/`: license, README/readme, changelog, asset notices and public docs.
 
@@ -24,6 +27,17 @@ to XDG_DATA_DIRS before starting your desktop/Nemo session. If XDG_DATA_HOME ove
 `~/.local/share`, a default user-local install is not automatically visible there. Use a
 matching data root or configure the session; the Make installer deliberately does not
 write action files outside PREFIX. Launchers resolve the executable through PATH.
+
+Fresh installs create no active file-manager action/extension. Help/About lets users choose
+adapters. Legacy tracked source Nemo files survive unchanged; DEB upgrades preserve the old
+package's global Nemo action and clean it on removal only if unchanged. User integrations
+remain on package/source removal; disable/remove them before removing CFP if desired.
+
+Automatic administrator search registration requires root-owned standard system locations.
+Use the matching DEB or configure PREFIX=/usr; a user-local install alone cannot register a
+root service, and /usr/local/custom prefixes may be outside Polkit's search path. They can
+use an independently installed /usr helper. Never point a root activation file at user-writable
+code. [Administrator deployment](admin-search.md) · [Adapter management](integrations.md).
 
 ## Make safety
 
@@ -58,7 +72,7 @@ the manifest and affected files, and rerun the same installer to recover tracked
 files. A kill between rename and manifest save can require manual review of one untracked
 file. Filesystem races by another process with the same write authority cannot be eliminated;
 do not install into a tree writable by untrusted users. Package and source operations must not
-run concurrently. No password or privileged helper is implemented.
+run concurrently. No passwords are handled by the installer. Administrator searching uses a separate authorized worker.
 
 `make clean` removes only known Make outputs, not Meson builds, sources, settings or unrelated
 files in build-make. Standard compiler flags and parallel builds are supported. Changing flags

@@ -1,6 +1,6 @@
 # Classic Find Plus
 
-**Version 1.0.0** — a native Linux file and folder search application, inspired by the classic
+**Version 1.0.2 release candidate** — a native Linux file and folder search application, inspired by the classic
 Find dialog and styled by your GTK3 desktop theme. Created by MacGyverr / ChatGPT.
 [GitHub project](https://github.com/MacGyverr/classic-find-plus) · GPL-3.0-or-later.
 
@@ -11,14 +11,14 @@ Results support fifteen configurable columns, exact Bytes/Bits, sorting, file ac
 multi-selection, drag-and-drop into Nemo, and CSV or tab-delimited TXT export.
 
 Linux Mint with Nemo is the primary platform. GTK3 runs on other Linux desktops with an X11
-or Wayland session; Nemo context-menu integration requires Nemo. Debian WSL2 is also used for
+or Wayland session; optional menus support Nemo, Nautilus, Dolphin, Caja and Thunar. Debian WSL2 is also used for
 development verification. Fedora, Arch and openSUSE native builds are documented but have not
 been tested on those distributions. No Windows-native application is provided.
 
 ## Install a Debian package
 
 Download the DEB for **your distribution and architecture** from the project's Releases page
-when available. The 1.0.0 source release does not imply a 1.0.0 DEB has been published.
+when available. Building 1.0.2 does not imply its DEB has been published.
 Mint 21.3 uses Ubuntu 22.04 (jammy) libraries; a DEB built on newer Debian may not work there.
 Double-click the downloaded DEB to use your graphical package installer, or run:
 
@@ -39,7 +39,7 @@ sudo apt purge classic-find-plus
 
 Both retain per-user preferences. To reset them, remove your own
 `~/.config/classic-find-plus` separately after backing it up. Avoid mixing DEB/RPM and source
-installs at the same prefix; never run the application GUI with sudo.
+installs at the same prefix. Plain root GUI launches are refused; the explicit administrator override is documented below.
 
 ## Install build prerequisites
 
@@ -64,8 +64,10 @@ cannot be supported just by adding a compiler.
 
 Runtime: GTK3/GLib and their normal system dependencies, a desktop icon theme and PNG loader.
 SVG icons in system themes also require the distribution's SVG pixbuf loader (for example
-`librsvg2-common` on Debian/Mint). Nemo is optional; GVfs and a desktop Polkit agent/backend
-are optional for administrative destinations. Neither is needed for ordinary local searching.
+`librsvg2-common` on Debian/Mint). Python 3 supports the integration manager. D-Bus, Polkit and an active desktop authentication
+agent enable administrator searching; GVfs/KIO backend support governs administrative transfers.
+Nemo and other managers are optional. Ordinary local searching does not need the privileged service.
+See [administrator setup](docs/admin-search.md) and [optional adapter dependencies](docs/integrations.md).
 
 ## Build with GNU Make
 
@@ -116,14 +118,38 @@ installation that needs tracked uninstall; use Meson for building/staging, or bu
 package with `sh scripts/build-deb.sh` and remove through the package manager. Never use Make
 uninstall on a Meson installation. See [install paths and removal](docs/install.md).
 
-## Nemo and administrative transfers
+## Administrator searches and root launch
 
-The **Find Plus** action appears when one directory is selected in Nemo. It launches
-`classic-find-plus` with that directory; launch the app independently from the desktop menu
-or terminal too. Actions install to `PREFIX/share/nemo/actions`; `~/.local/share/nemo/actions`
-is the usual user-level path. Custom prefixes must be visible through PATH and XDG_DATA_DIRS.
-Nemo normally notices action changes; reopen its windows or log out/in if the action is absent.
-`nemo -q` restarts Nemo but closes its windows; finish transfers first.
+Find Plus offers **Allow admin search**, initially unchecked on every launch and never saved.
+Checking does not authenticate. Find validates/captures filters and requests Polkit permission;
+other tabs stay ordinary. The separate temporary worker returns matching metadata while the
+GTK application remains your ordinary user. Failure/denial/cancel never silently falls back.
+Stop/Esc or window closure cancels; status identifies administrator searches.
+
+Protected results may be visible but still inaccessible for ordinary opening, copying, moving
+or export. Those operations do not inherit worker privileges. All existing functional filters,
+columns, sorting, history, selection and drag-and-drop use the same application code.
+
+```sh
+classic-find-plus                      # ordinary user
+sudo classic-find-plus                 # refused
+sudo classic-find-plus --allow-root    # entire GUI intentionally runs as root
+```
+
+The override displays Administrator Mode and a startup warning, uses a separate root
+configuration/cache/data profile and leaves every feature available with root permissions.
+It can change system files. It requires authorized graphical-session access and never weakens
+X11/Wayland access controls. Prefer the checkbox when only searching needs elevation.
+[Authorization, worker limits and setup](docs/admin-search.md).
+
+## Optional menus and administrative transfers
+
+Fresh installations enable no file-manager menus. Open **Help/About → File Manager Integrations**,
+Refresh, Install the desired adapter, then Enable it. Disable/Remove affects only owned CFP
+entries. Optional packages are reported and never installed silently. Existing Nemo integration
+and saved user choices survive upgrades. Menus pass the selected folder ahead of saved Look in.
+Nautilus/Caja use native Python extensions, Dolphin a service menu, Thunar a safe custom action.
+Restart/reload requirements and CLI equivalents are in [integration instructions](docs/integrations.md).
 
 Linux Mint workflow:
 
@@ -171,7 +197,8 @@ X11 restores normal window position; Wayland leaves placement to the compositor.
 - Missing `gtk/gtk.h` or pkg-config dependency errors: install the development packages, not
   just runtime libraries. Check `pkg-config --modversion gtk+-3.0 glib-2.0`.
 - Missing `pkg-config` or `glib-compile-resources`: install pkg-config/pkgconf and GLib tools.
-- Nemo action absent: verify PATH, action directory and prefix; reopen Nemo or your session.
+- Context menu absent: Refresh integrations in Help/About; check enabled status, optional
+  dependencies, PATH and the documented restart requirement.
 - Desktop launcher absent: ensure `PREFIX/share` is in XDG_DATA_DIRS; refresh the session.
 - Permission denied: choose a writable location or an authenticated Nemo destination.
 - Wayland position not restored: global placement is controlled by the compositor.
@@ -180,8 +207,9 @@ X11 restores normal window position; Wayland leaves placement to the compositor.
 
 This is Linux/POSIX software. No hardcoded CPU architecture is required for native builds;
 only amd64 Mint-compatible DEB tooling with an extracted SDK has been verified. Other CPU
-architectures are untested. No content search, recursive folder-size calculation, privileged
-helper or guaranteed remote-backend authentication is provided. Searches keep matching rows
+architectures are untested. The admin syscall guard supports Linux x86-64/AArch64; AArch64
+is unverified and other worker architectures refuse startup. No content search, recursive
+folder-size calculation or guaranteed remote-backend authentication is provided. Searches keep matching rows
 in memory; exports briefly snapshot visible data. Backend calls can delay cancellation.
 Directory symlinks are not followed below the selected root.
 

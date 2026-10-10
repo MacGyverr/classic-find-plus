@@ -13,6 +13,7 @@
 #include "app-info.h"
 #include "help-about.h"
 #include <stdio.h>
+#include <unistd.h>
 
 typedef struct {
     GtkWidget *window, *paned, *tabs, *location, *name, *name_mode, *case_sensitive,
@@ -23,7 +24,7 @@ typedef struct {
               *all_size_start, *all_size_end, *all_unit, *all_after, *all_before;
     CfSearchForm *form;
     CfSettings *settings;
-    GtkWidget *more, *ignored;
+    GtkWidget *more, *ignored, *admin_search;
     GtkListStore *store;
     GtkTreeModel *export_model;
     gulong export_inserted_id, export_removed_id;
@@ -32,7 +33,7 @@ typedef struct {
     GFile *results_root;
     guint timer, status_idle;
     guint64 examined, errors;
-    gboolean has_search, cancelled;
+    gboolean has_search, cancelled, administrator_search;
     char *first_error;
     CfWindowPreferences preferences;
     gboolean maximized, fullscreen, iconified, updating_bounds;
@@ -345,8 +346,13 @@ static GtkWidget *all_in_one(Window *w)
     gtk_widget_set_name(stay, "all-stay-on-filesystem");
     bind_control(w, "stay-on-filesystem", stay, "active");
     gtk_grid_attach(GTK_GRID(grid), stay, 0, 6, 3, 1);
+    w->admin_search = gtk_check_button_new_with_label("Allow admin search");
+    gtk_widget_set_name(w->admin_search, "all-admin-search");
+    gtk_widget_set_tooltip_text(w->admin_search,
+        "Authenticate through Polkit when Find is pressed. Search only; file actions retain this application's permissions.");
+    gtk_grid_attach(GTK_GRID(grid), w->admin_search, 0, 7, 3, 1);
     gtk_container_add(GTK_CONTAINER(more), extra);
-    gtk_grid_attach(GTK_GRID(grid), more, 0, 7, 3, 1);
+    gtk_grid_attach(GTK_GRID(grid), more, 0, 8, 3, 1);
     return grid;
 }
 
@@ -488,8 +494,9 @@ static void search_status(Window *w)
     const char *state = w->search ? (w->cancelled ? "Stopping" : "Searching") :
                                   (w->cancelled ? "Stopped" : "Finished");
     guint count = gtk_tree_model_iter_n_children(GTK_TREE_MODEL(w->store), NULL);
-    g_autofree char *message = g_strdup_printf("%s — %u results, %" G_GUINT64_FORMAT
-        " examined, %" G_GUINT64_FORMAT " errors%s", state, count, w->examined, w->errors,
+    g_autofree char *message = g_strdup_printf("%s — %s%u results, %" G_GUINT64_FORMAT
+        " examined, %" G_GUINT64_FORMAT " errors%s", state,
+        w->administrator_search ? "Administrator search; " : "", count, w->examined, w->errors,
         w->errors ? " (hover for first error)" : "");
     status(w, message, w->first_error);
 }
@@ -559,7 +566,11 @@ static void find(GtkButton *button, gpointer data)
     }
     g_autoptr(GFile) root = g_file_new_for_commandline_arg(location);
     g_autoptr(CfCriteria) snapshot = cf_criteria_copy(criteria);
-    w->search = cf_search_start(root, criteria, &error);
+    w->administrator_search = geteuid() == 0 ||
+        (gtk_notebook_get_current_page(GTK_NOTEBOOK(w->tabs)) == CF_TAB_PLUS &&
+         gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(w->admin_search)));
+    w->search = w->administrator_search && geteuid() != 0 ?
+        cf_search_start_admin(root, criteria, &error) : cf_search_start(root, criteria, &error);
     if (!w->search) {
         status(w, error->message, NULL);
         return;
@@ -573,7 +584,7 @@ static void find(GtkButton *button, gpointer data)
     gtk_widget_set_sensitive(w->tabs, FALSE);
     gtk_widget_set_sensitive(w->find, FALSE);
     gtk_widget_set_sensitive(w->stop, TRUE);
-    status(w, "Searching…", NULL);
+    status(w, w->administrator_search ? "Administrator search — authorizing / searching…" : "Searching…", NULL);
     w->timer = g_timeout_add(30, poll, w);
 }
 
@@ -682,7 +693,8 @@ GtkWidget *cf_window_new(GtkApplication *app, GFile *root)
     w->maximized = cf_settings_bool(w->settings, "Window", "Maximized", FALSE);
     w->window = gtk_application_window_new(app);
     g_object_set_data(G_OBJECT(w->window), "cf-export-window", w);
-    gtk_window_set_title(GTK_WINDOW(w->window), CF_APP_NAME " — Find: Files or Folders");
+    gtk_window_set_title(GTK_WINDOW(w->window), geteuid() == 0 ?
+        CF_APP_NAME " — Administrator Mode — Find: Files or Folders" : CF_APP_NAME " — Find: Files or Folders");
     gtk_window_set_default_size(GTK_WINDOW(w->window), w->preferences.width, w->preferences.height);
     gtk_window_set_icon_name(GTK_WINDOW(w->window), "classic-find-plus");
     g_autoptr(GdkPixbuf) icon = gdk_pixbuf_new_from_resource("/org/classicfind/plus/icon.png", NULL);

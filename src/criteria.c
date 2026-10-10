@@ -87,6 +87,7 @@ gboolean cf_criteria_excludes(const CfCriteria *c, GFileInfo *info)
 void cf_criteria_free(CfCriteria *c)
 {
     if (!c) return;
+    g_free(c->input_name); g_free(c->input_exclude); g_free(c->input_extension);
     g_free(c->name);
     g_free(c->extension);
     g_free(c->exclude);
@@ -101,6 +102,9 @@ CfCriteria *cf_criteria_copy(const CfCriteria *source)
 {
     if (!source) return NULL;
     CfCriteria *copy = g_memdup2(source, sizeof *source);
+    copy->input_name = g_strdup(source->input_name);
+    copy->input_exclude = g_strdup(source->input_exclude);
+    copy->input_extension = g_strdup(source->input_extension);
     copy->name = g_strdup(source->name);
     copy->extension = g_strdup(source->extension);
     copy->exclude = g_strdup(source->exclude);
@@ -128,6 +132,10 @@ CfCriteria *cf_criteria_new(const CfCriteriaInput *in, GDateTime *now, GError **
     }
     if (g_str_has_prefix(extension, "*.")) extension += 2;
     else if (*extension == '.') extension++;
+    /* Keep original validated text for IPC. Unicode casefolding can expand
+     * character counts, and regex escapes must retain their original case. */
+    c->input_name = g_strdup(name); c->input_exclude = g_strdup(exclude);
+    c->input_extension = g_strdup(in->extension ? in->extension : "");
     if (strpbrk(extension, "*?/")) {
         invalid(error, "Enter one extension, such as jpg or tar.gz; wildcards belong in Named.");
         return NULL;

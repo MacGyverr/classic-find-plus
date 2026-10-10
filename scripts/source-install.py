@@ -11,7 +11,7 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parent.parent
-DOCS = ['search.md', 'file-actions.md', 'permissions.md', 'settings.md', 'results-sync.md',
+DOCS = ['admin-search.md', 'integrations.md', 'search.md', 'file-actions.md', 'permissions.md', 'settings.md', 'results-sync.md',
         'export.md', 'exclusion.md', 'install.md', 'publishing.md', 'packaging.md']
 STATE = 'share/classic-find-plus/source-install.json'
 
@@ -20,7 +20,7 @@ def fail(message):
 
 def absolute(value, label):
     p = Path(value)
-    if not p.is_absolute() or '..' in p.parts or str(p) == '/' or any(c in str(p) for c in '*?[]'):
+    if not p.is_absolute() or '..' in p.parts or str(p) == '/' or any(c in str(p) for c in '*?[]\n\r'):
         fail(label + ' must be an absolute non-root path without .. or package-query glob characters')
     return p
 
@@ -35,9 +35,17 @@ def safe_path(path):
 def plan():
     entries = {'bin/classic-find-plus': 'build-make/classic-find-plus',
                'bin/classic-find': '@classic-find-plus',
-               'share/nemo/actions/classic-find-plus.nemo_action': 'data/nemo/classic-find-plus.nemo_action',
                'share/applications/org.classicfind.Plus.desktop': 'data/desktop/org.classicfind.Plus.desktop',
                'share/icons/hicolor/16x16/apps/classic-find-plus.png': 'data/artwork/icon.png'}
+    entries.update({
+        'libexec/classic-find-plus-search-worker': 'build-make/classic-find-plus-search-worker',
+        'share/dbus-1/system-services/org.classicfind.Plus.Search.service': 'build-make/org.classicfind.Plus.Search.service',
+        'share/dbus-1/system.d/org.classicfind.Plus.Search.conf': 'data/privileged/org.classicfind.Plus.Search.conf',
+        'share/polkit-1/actions/org.classicfind.plus.search.policy': 'data/privileged/org.classicfind.plus.search.policy',
+        'share/classic-find-plus/integration-manager.py': 'scripts/integration-manager.py'})
+    for name in ['classic-find-plus.nemo_action', 'classic-find-plus-nautilus.py', 'classic-find-plus-caja.py',
+                 'classic-find-plus.desktop', 'classic-find-plus-thunar.xml', 'classic-find-plus-caja-script.py']:
+        entries['share/classic-find-plus/integrations/' + name] = 'data/integrations/' + name
     for name in ['LICENSE', 'README.md', 'readme.txt', 'CHANGELOG.md', 'THIRD_PARTY.md']:
         entries['share/doc/classic-find-plus/' + name] = name
     for name in DOCS:
@@ -98,6 +106,7 @@ def main():
     target = stage / str(prefix).lstrip('/') if stage else prefix
     safe_path(target)
     paths = plan()
+    legacy_nemo = 'share/nemo/actions/classic-find-plus.nemo_action'
     manifest = target / STATE
     safe_path(manifest)
     previous = {}
@@ -106,8 +115,11 @@ def main():
         data = json.loads(manifest.read_text())
         if data.get('format') != 1 or data.get('prefix') != str(prefix): fail('Invalid installation manifest')
         previous = data.get('files', {})
-        if not isinstance(previous, dict) or not set(previous) <= set(paths): fail('Unapproved manifest path')
+        if not isinstance(previous, dict) or not set(previous) <= set(paths) | {legacy_nemo}: fail('Unapproved manifest path')
         if any(not isinstance(v, str) for v in previous.values()): fail('Invalid manifest hashes')
+    if legacy_nemo in previous:
+        # Keep tracked legacy integration/choice on source upgrades; fresh installs omit it.
+        paths[legacy_nemo] = '!keep'
     if sys.argv[1] == 'uninstall' and not previous:
         fail('No Make installation manifest for this prefix. Use the original installer/package manager.')
     # Preflight ALL paths before modifying any file. A stale manifest is never sufficient.
@@ -146,13 +158,15 @@ def main():
             os.close(fd)
             temp = Path(temp_name)
             prepared.append((relative, dest, temp))
-            if source.startswith('@'):
+            if source == '!keep':
+                shutil.copyfile(dest, temp); temp.chmod(0o644)
+            elif source.startswith('@'):
                 temp.unlink(); temp.symlink_to(source[1:])
             else:
                 src = ROOT / source
                 safe_path(src)
                 shutil.copyfile(src, temp)
-                temp.chmod(0o755 if relative.startswith('bin/') else 0o644)
+                temp.chmod(0o755 if relative.startswith(('bin/', 'libexec/')) else 0o644)
         updated = dict(previous)
         for relative, dest, temp in prepared:
             package_owned(prefix / relative, stage)

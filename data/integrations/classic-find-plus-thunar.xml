@@ -1,0 +1,10 @@
+<action>
+  <icon>classic-find-plus</icon>
+  <name>Find with Classic Find Plus</name>
+  <unique-id>org.classicfind.Plus.find</unique-id>
+  <command>classic-find-plus -- %f</command>
+  <description>Search this folder</description>
+  <patterns>*</patterns>
+  <directories/>
+  <startup-notify/>
+</action>

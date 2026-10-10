@@ -13,3 +13,6 @@ release inventory. Generated GResource C is produced at build time from the lice
 GTK, GLib/GIO and their dependencies are system libraries, not vendored source or binary
 assets. Their respective licenses continue to apply. The application requests standard
 theme icons from the desktop; system icon themes are not redistributed in this source tree.
+
+Optional administrator search communicates with system D-Bus and Polkit under their own licenses.
+Linux UAPI headers provide syscall/filter definitions; no third-party helper or authority is bundled.

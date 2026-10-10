@@ -49,3 +49,7 @@ https://github.com/linuxmint/nemo/blob/master/libnemo-private/nemo-dnd.c
 Other GTK receivers may choose different defaults. Cross-filesystem, unavailable-source and
 permission errors are handled by the receiving file manager.
 
+
+Administrator search results retain ordinary file-operation permissions; worker authorization
+is never forwarded to actions or receiving managers. Explicit --allow-root instead runs the
+whole GUI with root authority; see [permissions](admin-search.md).

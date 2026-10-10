@@ -1,4 +1,4 @@
-# Exporting Results (1.0.0)
+# Exporting Results (1.0.1)
 
 The Export results button sits below Find/Stop. It is enabled only when the displayed model
 contains rows, including stopped partial searches, and disabled while writing. First insertion,
@@ -33,7 +33,8 @@ GTK supplies one standard overwrite prompt. Declining leaves the chooser open. E
 regular files have their version captured at confirmation and checked before replacement;
 changed files require choosing/confirming again. Symbolic links and nonlocal URI outputs
 are rejected. Use a local or mounted filesystem, ordinary user permissions and another
-folder when access is denied. No privilege helper or password handling is involved.
+folder when access is denied. No automatic elevation or password handling is involved; search-worker authorization does not
+grant export permissions. Explicit full-root Administrator Mode exports with root permissions.
 
 The worker holds immutable strings only and streams one record at a time into a private
 0600 temporary file in the destination directory. It closes successfully before commit.

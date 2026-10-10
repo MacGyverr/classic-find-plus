@@ -1,4 +1,4 @@
-# Exclusion and exact sizes (1.0.0)
+# Exclusion and exact sizes (1.0.1)
 
 Find Plus offers one Exclude expression below File name. It is restored without starting a
 search, shares filename mode and case sensitivity, and remains active with More Filters

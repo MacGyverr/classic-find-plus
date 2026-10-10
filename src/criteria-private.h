@@ -1,6 +1,7 @@
 #pragma once
 #include "search.h"
 struct _CfCriteria {
+    char *input_name, *input_exclude, *input_extension;
     char *name, *extension, *exclude;
     GPatternSpec *exclude_pattern;
     GRegex *exclude_regex;

@@ -109,9 +109,9 @@ esac
 PACKAGE_VERSION="$DEB_VERSION+$DISTRIBUTION"
 ARCH=$(dpkg-architecture -qDEB_HOST_ARCH)
 if [ -n "$SYSROOT" ]; then
-    SUBSTVARS=$(dpkg-shlibdeps --admindir="$SYSROOT/var/lib/dpkg" -l"$SYSROOT/usr/lib/x86_64-linux-gnu" -l"$SYSROOT/lib/x86_64-linux-gnu" -O -e"$BUILD/classic-find-plus")
+    SUBSTVARS=$(dpkg-shlibdeps --admindir="$SYSROOT/var/lib/dpkg" -l"$SYSROOT/usr/lib/x86_64-linux-gnu" -l"$SYSROOT/lib/x86_64-linux-gnu" -O -e"$BUILD/classic-find-plus" -e"$BUILD/classic-find-plus-search-worker")
 else
-    SUBSTVARS=$(dpkg-shlibdeps -O -e"$BUILD/classic-find-plus")
+    SUBSTVARS=$(dpkg-shlibdeps -O -e"$BUILD/classic-find-plus" -e"$BUILD/classic-find-plus-search-worker")
 fi
 case "$SUBSTVARS" in
     'shlibs:Depends='*) SHLIB_DEPS=${SUBSTVARS#shlibs:Depends=} ;;
@@ -120,6 +120,9 @@ esac
 [ -n "$SHLIB_DEPS" ] || { echo "No shared-library dependencies found" >&2; exit 1; }
 
 install -m 0644 "$ROOT/debian/copyright" "$PKG_ROOT/usr/share/doc/classic-find-plus/copyright"
+for STAGE in preinst postinst postrm; do
+    install -m 0755 "$ROOT/debian/nemo-migration.py" "$PKG_ROOT/DEBIAN/$STAGE"
+done
 INSTALLED_SIZE=$(du -sk --exclude=DEBIAN "$PKG_ROOT" | cut -f1)
 
 cat > "$PKG_ROOT/DEBIAN/control" <<EOF_CONTROL
@@ -130,13 +133,14 @@ Priority: optional
 Architecture: $ARCH
 Installed-Size: $INSTALLED_SIZE
 Maintainer: MacGyverr / ChatGPT <classic-find-plus@localhost>
-Depends: $SHLIB_DEPS, libgtk-3-0 (>= 3.22) | libgtk-3-0t64 (>= 3.22), libglib2.0-0 (>= 2.70) | libglib2.0-0t64 (>= 2.70), librsvg2-common, shared-mime-info
-Suggests: nemo
+Pre-Depends: python3
+Depends: $SHLIB_DEPS, libgtk-3-0 (>= 3.22) | libgtk-3-0t64 (>= 3.22), libglib2.0-0 (>= 2.70) | libglib2.0-0t64 (>= 2.70), librsvg2-common, shared-mime-info, dbus, policykit-1 | polkitd, libglib2.0-bin
+Suggests: nemo, python3-nautilus
 Conflicts: classic-find
 Replaces: classic-find
 Provides: classic-find
 Homepage: https://github.com/MacGyverr/classic-find-plus
-Description: Classic Find Plus file and folder search for Nemo
+Description: Classic Find Plus file and folder search with optional desktop menus
  A native GTK3 application for finding files and folders. It searches selected
  directories with name, exclusion, type, selectable-date and size filters, and provides
  desktop-themed results, exact Bytes/Bits columns, file actions, URI drag-and-drop

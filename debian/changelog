@@ -1,3 +1,21 @@
+classic-find-plus (1.0.2-1) unstable; urgency=medium
+
+  * Add Caja Scripts launcher and safe migration from the owned Python extension.
+  * Show the Caja Scripts method and Switch to Scripts control in Help/About.
+  * Clarify that Administrator Mode ends when the main application window closes.
+
+ -- MacGyverr / ChatGPT <classic-find-plus@localhost>  Fri, 09 Oct 2026 18:00:00 -0700
+
+classic-find-plus (1.0.1-1) unstable; urgency=medium
+
+  * Add Polkit-authorized read-only administrator search with bounded system D-Bus IPC.
+  * Add explicit --allow-root Administrator Mode with an isolated root profile.
+  * Add opt-in Nemo, Nautilus, Dolphin, Caja and Thunar integration management.
+  * Keep fresh installations inactive and preserve legacy Nemo choices on upgrade.
+  * Extend Make/Meson installation, public docs and release resources.
+
+ -- MacGyverr / ChatGPT <classic-find-plus@localhost>  Fri, 09 Oct 2026 18:00:00 -0700
+
 classic-find-plus (1.0.0-1) unstable; urgency=medium
 
   * Establish 1.0.0 as the release baseline for future version increments.
