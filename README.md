@@ -4,6 +4,9 @@
 
 Example of a Find Plus normal search.
 
+<img width="3319" height="1757" alt="find-plus3" src="https://github.com/user-attachments/assets/2b82595f-d3c8-4fdb-830d-6e3ac1ed0796" />
+
+Example of a Find Plus hex content search.
 
 <img width="1521" height="1053" alt="find-plus2" src="https://github.com/user-attachments/assets/93e56d66-e61b-400e-97b8-0c0035f0e6ef" />
 
