@@ -2,6 +2,7 @@
 #include "config.h"
 
 static const char *managers[] = { "nemo", "nautilus", "dolphin", "caja", "thunar" };
+static const char *manager_names[] = { "Nemo", "GNOME Files (Nautilus)", "Dolphin", "Caja", "Thunar" };
 typedef struct {
     GtkWidget *box, *message, *labels[5], *install[5], *enable[5], *remove[5];
     gboolean enabled[5], closed;
@@ -63,9 +64,11 @@ static void finished(GObject *object, GAsyncResult *result, gpointer data)
             }
             gboolean switch_caja = !g_strcmp0(name, "caja") &&
                 g_key_file_get_boolean(keys, name, "legacy_extension", NULL);
-            gtk_widget_set_sensitive(s->install[i], !installed || switch_caja);
-            gtk_button_set_label(GTK_BUTTON(s->install[i]), switch_caja ? "Switch to Scripts" : "Install");
-            g_object_set_data(G_OBJECT(s->install[i]), "operation", switch_caja ? "enable" : "install");
+            gboolean repair_thunar = !g_strcmp0(name, "thunar") &&
+                g_key_file_get_boolean(keys, name, "needs_update", NULL);
+            gtk_widget_set_sensitive(s->install[i], !installed || switch_caja || repair_thunar);
+            gtk_button_set_label(GTK_BUTTON(s->install[i]), switch_caja ? "Switch to Scripts" : repair_thunar ? "Repair actions" : "Install");
+            g_object_set_data(G_OBJECT(s->install[i]), "operation", switch_caja || repair_thunar ? "enable" : "install");
             gtk_widget_set_sensitive(s->enable[i], installed);
             gtk_button_set_label(GTK_BUTTON(s->enable[i]), s->enabled[i] ? "Disable" : "Enable");
             gtk_widget_set_sensitive(s->remove[i], installed);
@@ -125,14 +128,14 @@ GtkWidget *cf_integrations_new(void)
     gtk_box_pack_start(GTK_BOX(s->box), title, FALSE, FALSE, 0);
     s->message = gtk_label_new("Optional user-local menus. Install registers a disabled adapter; Enable activates it. "
         "Remove deletes only unchanged CFP-owned entries. Dependencies are never installed automatically. "
-        "Caja uses Scripts > Find with Classic Find Plus. Restart the manager after changes. "
+        "Caja uses Scripts > Find with Classic Find Plus. Thunar Enable includes Find and Open as Administrator; Repair actions upgrades older installs. Restart the manager after changes. "
         "Existing system Nemo actions are retained; Enable/Disable uses Nemo’s per-user preference.");
     gtk_label_set_line_wrap(GTK_LABEL(s->message), TRUE);
     gtk_label_set_line_wrap_mode(GTK_LABEL(s->message), PANGO_WRAP_WORD_CHAR);
     gtk_label_set_max_width_chars(GTK_LABEL(s->message), 65); gtk_label_set_xalign(GTK_LABEL(s->message), 0);
     gtk_box_pack_start(GTK_BOX(s->box), s->message, FALSE, FALSE, 0);
     for (guint i = 0; i < G_N_ELEMENTS(managers); i++) {
-        GtkWidget *name = gtk_label_new(managers[i]); gtk_label_set_xalign(GTK_LABEL(name), 0);
+        GtkWidget *name = gtk_label_new(manager_names[i]); gtk_label_set_xalign(GTK_LABEL(name), 0);
         gtk_box_pack_start(GTK_BOX(s->box), name, FALSE, FALSE, 0);
         s->labels[i] = gtk_label_new("Status not checked — press Refresh");
         g_autofree char *id = g_strdup_printf("integration-%s-status", managers[i]);

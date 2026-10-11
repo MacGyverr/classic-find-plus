@@ -1,10 +1,10 @@
-Classic Find Plus 1.0.6
+Classic Find Plus 1.0.7
 Created by MacGyverr / ChatGPT. GPL-3.0-or-later; see LICENSE and THIRD_PARTY.md.
 Project: https://github.com/MacGyverr/classic-find-plus
 Administrator search and the explicit root GUI work on the owner's Linux Mint 21.3 desktop.
 Real desktop denial/cancellation remains unreported; see docs/admin-search.md.
 
-Native Linux GTK3 file and folder search with optional Nemo/Nautilus/Dolphin/Caja/Thunar integration. See README.md for dependency
+Native Linux GTK3 file and folder search with optional Nemo/GNOME Files (Nautilus)/Dolphin/Caja/Thunar integration. See README.md for dependency
 commands, GNU Make and Meson builds, features and troubleshooting.
 
 DEB installation/update: download the matching package and double-click it, or run
@@ -32,10 +32,37 @@ Meson builds/staging are supported; its generic uninstall target is not a safe l
 route with package ownership checks. Prefer Make or a native package for removable installs.
 
 Linux Mint workflow:
-Open Nemo, F3 split panes, keep a normal source folder, Ctrl+L in the destination pane,
-enter admin:///opt/, authenticate, open CFP from the normal folder and drag results into
-the administrative pane. CFP stays a regular-user app. Support depends on Nemo, GVfs/Polkit
-and the desktop session. Plain sudo GUI launch is refused.
+
+Nemo, GNOME Files (Nautilus) and Caja accept CFP drops into administrator-opened
+folders on the owner's tested systems. GNOME Files is Nautilus, using the same adapter.
+Thunar can open `admin:///opt`; CFP now adds its convenient **Open as Administrator**
+action. New Thunar administrative transfers still need real-desktop acceptance.
+
+1. Locate the protected destination directory in the file manager.
+2. Open it as Administrator using its available context-menu action. In Thunar,
+   enable CFP's Thunar integration first, then right-click one selected local folder
+   and choose **Open as Administrator**. Where supported, Ctrl+L and `admin:///opt/`
+   can open the destination directly; Nemo's F3 split panes are convenient.
+3. Authenticate if requested by GVfs/Polkit.
+4. Search in CFP as your normal user and select results.
+5. Drag those results into the administrator-opened destination.
+6. Let the receiving file manager perform the copy/move and any further authorization.
+
+CFP's ordinary copy/move and drag-and-drop behavior is unchanged. Ctrl requests copy,
+Shift requests move; the receiving manager decides. Administrative destinations depend
+on the manager, distribution, installed GVfs admin backend and desktop Polkit agent.
+A protected ordinary local folder can reject a drop. If `admin://` is unavailable,
+check your distribution's GVfs package documentation (Ubuntu/Mint commonly provides
+it in `gvfs-backends`) and that a desktop authentication agent is running. Install any
+missing distribution package yourself; CFP never installs it automatically. A denied
+or cancelled prompt grants no access. Thunar/GVfs report authentication and location
+errors; the helper reports missing backend/program and launch failures.
+
+GVfs administrative access does not run the whole file manager as root. Keep CFP and
+Thunar running as your regular user. Allow admin search authorizes only CFP's read-only
+search worker, not later file operations. Dolphin's ordinary integration is preserved;
+Dolphin-specific administrative access/transfers are outside this change and unverified.
+
 
 Find Plus Exclude is one saved expression sharing filename mode/case. A leading slash
 selects directory components; matching subtrees are skipped before enumeration. Example:

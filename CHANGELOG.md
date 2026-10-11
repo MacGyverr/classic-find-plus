@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.7
+
+Thunar Enable now includes a normal-user Open as Administrator folder action using
+GVfs/Polkit, with safe local URI encoding, idempotent upgrade/repair, private backups
+and preservation of unrelated XML/actions. GNOME Files (Nautilus) uses the existing
+adapter. Find Plus inputs share theme-compatible natural heights with centered
+checkboxes; other tabs and action buttons retain their sizing. Help and transfer
+documentation cover all five managers; drag-and-drop and search engines are unchanged.
+
 ## 1.0.6
 
 Find Plus Containing text now streams literal UTF-8 (Unicode case folding) or exact

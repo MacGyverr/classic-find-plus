@@ -1,0 +1,10 @@
+<action>
+  <icon>system-lock-screen</icon>
+  <name>Open as Administrator</name>
+  <unique-id>org.classicfind.Plus.open-admin</unique-id>
+  <command>classic-find-plus-thunar-admin -- %f</command>
+  <description>Open this local folder through GVfs administrative access</description>
+  <patterns>*</patterns>
+  <directories/>
+  <startup-notify/>
+</action>

@@ -9,6 +9,7 @@ another version through PATH and desktop action lookup. Do not overwrite package
 Both build systems install the same functional files under PREFIX:
 
 - `bin/classic-find-plus`, plus compatibility symlink `bin/classic-find`.
+- `bin/classic-find-plus-thunar-admin` (0755, normal user; never setuid).
 - `share/applications/org.classicfind.Plus.desktop`.
 - `libexec/classic-find-plus-search-worker` (0755, never setuid).
 - `share/dbus-1/system-services` activation and `share/dbus-1/system.d` bus policy.
@@ -97,3 +98,9 @@ Native DEB builds: `sh scripts/build-deb.sh` creates a release archive under dis
 installation. Its system-library requirements match the build machine. Build on the intended
 distribution for compatibility; see [packaging](packaging.md). RPM packaging is not supplied;
 Fedora/openSUSE users can build natively with Make/Meson or create a distro-native package.
+
+The installed `classic-find-plus-thunar-admin` helper is a normal mode-0755 executable,
+not setuid. Thunar Enable adds both folder actions; fresh installs activate none.
+GVfs admin support and a desktop Polkit agent are optional for administrative folders;
+see [integration setup](integrations.md) and [transfer troubleshooting](permissions.md).
+GNOME Files (Nautilus) keeps the existing Nautilus adapter and dependencies.

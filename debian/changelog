@@ -1,3 +1,11 @@
+classic-find-plus (1.0.7-1) unstable; urgency=medium
+
+  * Add paired Thunar administrative-folder action and safe normal-user URI helper.
+  * Preserve custom actions and provide upgrade repair with atomic XML backups.
+  * Standardize scoped Find Plus control heights and document administrative transfers.
+
+ -- MacGyverr / ChatGPT <classic-find-plus@localhost>  Sun, 11 Oct 2026 12:00:00 -0700
+
 classic-find-plus (1.0.6-1) unstable; urgency=medium
 
   * Add streaming literal UTF-8 and exact hexadecimal content matching.

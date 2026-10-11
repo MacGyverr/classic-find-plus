@@ -282,16 +282,37 @@ static GtkWidget *optional_row(GtkWidget *grid, int column, int row,
     return check;
 }
 
+/* Share natural text/icon heights only inside Find Plus. Checkbox indicators keep
+ * native dimensions; their allocation is centered in the surrounding row. */
+static void plus_control_sizes(GtkWidget *widget, GtkSizeGroup *group)
+{
+    if (GTK_IS_CHECK_BUTTON(widget)) {
+        gtk_widget_set_valign(widget, GTK_ALIGN_CENTER);
+        return;
+    }
+    if (GTK_IS_ENTRY(widget) || GTK_IS_COMBO_BOX(widget) || GTK_IS_BUTTON(widget)) {
+        gtk_widget_set_valign(widget, GTK_ALIGN_CENTER);
+        gtk_size_group_add_widget(group, widget);
+        return; /* Do not size a combo and its internal button against each other. */
+    }
+    if (GTK_IS_CONTAINER(widget)) {
+        GList *children = gtk_container_get_children(GTK_CONTAINER(widget));
+        for (GList *item = children; item; item = item->next)
+            plus_control_sizes(item->data, group);
+        g_list_free(children);
+    }
+}
+
 static GtkWidget *all_in_one(Window *w)
 {
     GtkWidget *grid = grid_new();
     gtk_grid_set_row_spacing(GTK_GRID(grid), 2);
     gtk_container_set_border_width(GTK_CONTAINER(grid), 6);
-    /* Local padding only; keep theme fonts and theme minimum control heights. */
+    /* Scoped natural sizing: fonts, borders and horizontal theme padding remain native. */
     GdkScreen *screen=gtk_widget_get_screen(grid);
     if (!g_object_get_data(G_OBJECT(screen),"cf-compact-style")) {
         GtkCssProvider *compact = gtk_css_provider_new();
-        gtk_css_provider_load_from_data(compact, "#all-in-one entry, #all-in-one button { padding-top: 1px; padding-bottom: 1px; }", -1, NULL);
+        gtk_css_provider_load_from_data(compact, "#all-in-one entry, #all-in-one button { padding-top: 1px; padding-bottom: 1px; } #all-in-one entry:not(#containing-text), #all-in-one button { min-height: 0; }", -1, NULL);
         gtk_style_context_add_provider_for_screen(screen, GTK_STYLE_PROVIDER(compact), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
         g_object_unref(compact);
         g_object_set_data(G_OBJECT(screen),"cf-compact-style",GINT_TO_POINTER(1));
@@ -480,6 +501,9 @@ static GtkWidget *all_in_one(Window *w)
     gtk_grid_attach(GTK_GRID(grid), traversal, 0, 6, 3, 1);
     gtk_container_add(GTK_CONTAINER(more), extra);
     gtk_grid_attach(GTK_GRID(grid), more, 0, 7, 3, 1);
+    GtkSizeGroup *controls = gtk_size_group_new(GTK_SIZE_GROUP_VERTICAL);
+    plus_control_sizes(grid, controls);
+    g_object_unref(controls);
     return grid;
 }
 

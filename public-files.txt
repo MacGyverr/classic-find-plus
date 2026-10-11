@@ -115,3 +115,8 @@ src/traversal.c
 include/content-search.h
 src/content-search.c
 docs/content-search.md
+
+include/thunar-admin.h
+src/thunar-admin.c
+helpers/thunar-admin-main.c
+data/integrations/classic-find-plus-thunar-admin.xml

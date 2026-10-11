@@ -109,9 +109,9 @@ esac
 PACKAGE_VERSION="$DEB_VERSION+$DISTRIBUTION"
 ARCH=$(dpkg-architecture -qDEB_HOST_ARCH)
 if [ -n "$SYSROOT" ]; then
-    SUBSTVARS=$(dpkg-shlibdeps --admindir="$SYSROOT/var/lib/dpkg" -l"$SYSROOT/usr/lib/x86_64-linux-gnu" -l"$SYSROOT/lib/x86_64-linux-gnu" -O -e"$BUILD/classic-find-plus" -e"$BUILD/classic-find-plus-search-worker")
+    SUBSTVARS=$(dpkg-shlibdeps --admindir="$SYSROOT/var/lib/dpkg" -l"$SYSROOT/usr/lib/x86_64-linux-gnu" -l"$SYSROOT/lib/x86_64-linux-gnu" -O -e"$BUILD/classic-find-plus" -e"$BUILD/classic-find-plus-search-worker" -e"$BUILD/classic-find-plus-thunar-admin")
 else
-    SUBSTVARS=$(dpkg-shlibdeps -O -e"$BUILD/classic-find-plus" -e"$BUILD/classic-find-plus-search-worker")
+    SUBSTVARS=$(dpkg-shlibdeps -O -e"$BUILD/classic-find-plus" -e"$BUILD/classic-find-plus-search-worker" -e"$BUILD/classic-find-plus-thunar-admin")
 fi
 case "$SUBSTVARS" in
     'shlibs:Depends='*) SHLIB_DEPS=${SUBSTVARS#shlibs:Depends=} ;;

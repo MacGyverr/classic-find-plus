@@ -25,6 +25,8 @@ app = executable('classic-find-plus', source_manifest,
 worker = executable('classic-find-plus-search-worker', 'worker/main.c', 'worker/read-only.c',
   'src/metadata.c', search_sources, include_directories: [inc, include_directories('worker')],
   dependencies: gio, install: true, install_dir: get_option('libexecdir'))
+thunar_admin = executable('classic-find-plus-thunar-admin', 'helpers/thunar-admin-main.c',
+  'src/thunar-admin.c', include_directories: inc, dependencies: gtk, install: true)
 service_config = configuration_data()
 worker_path = get_option('prefix') / get_option('libexecdir') / 'classic-find-plus-search-worker'
 service_config.set('WORKER_EXEC', '"' + worker_path.replace('\\', '\\\\').replace('"', '\\"') + '"')
@@ -35,7 +37,7 @@ install_data('data/privileged/org.classicfind.Plus.Search.conf', install_dir: ge
 install_data('data/privileged/org.classicfind.plus.search.policy', install_dir: get_option('datadir') / 'polkit-1/actions')
 install_data('scripts/accounts.py', 'scripts/integration-manager.py', install_dir: get_option('datadir') / 'classic-find-plus')
 integration_files = ['classic-find-plus.nemo_action', 'classic-find-plus-nautilus.py', 'classic-find-plus-caja.py',
-  'classic-find-plus.desktop', 'classic-find-plus-thunar.xml', 'classic-find-plus-caja-script.py']
+  'classic-find-plus.desktop', 'classic-find-plus-thunar.xml', 'classic-find-plus-thunar-admin.xml', 'classic-find-plus-caja-script.py']
 foreach adapter : integration_files
   install_data('data/integrations' / adapter, install_dir: get_option('datadir') / 'classic-find-plus/integrations')
 endforeach

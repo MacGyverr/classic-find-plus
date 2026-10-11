@@ -10,10 +10,10 @@ CFP never installs dependencies or additional file managers, nor restarts one au
 | Manager | Supported adapter | Optional dependency / user location |
 | --- | --- | --- |
 | Nemo | single-directory `.nemo_action` | Nemo and `gsettings`; `$XDG_DATA_HOME/nemo/actions` |
-| Nautilus | native Python MenuProvider, 3.x/4.0/4.1 signatures | distro `python3-nautilus`, Python GI and Nautilus typelib; `$XDG_DATA_HOME/nautilus-python/extensions` |
+| GNOME Files (Nautilus) | native Python MenuProvider, 3.x/4.0/4.1 signatures | distro `python3-nautilus`, Python GI and Nautilus typelib; `$XDG_DATA_HOME/nautilus-python/extensions` |
 | Dolphin | KDE service menu, directory MIME type | Dolphin/KIO; `$XDG_DATA_HOME/kio/servicemenus` (Frameworks ≥5.85) |
 | Caja | executable Scripts menu launcher | Python 3; `$XDG_CONFIG_HOME/caja/scripts/Find with Classic Find Plus` |
-| Thunar | one directory custom action | Thunar UCA plugin; `$XDG_CONFIG_HOME/Thunar/uca.xml` |
+| Thunar | Find + Open as Administrator directory actions | Thunar UCA plugin; `$XDG_CONFIG_HOME/Thunar/uca.xml` |
 
 XDG_DATA_HOME normally means `~/.local/share`, XDG_CONFIG_HOME `~/.config`. All adapters
 launch the same `classic-find-plus -- LOCATION`. Python adapters use an argv array; native
@@ -52,9 +52,44 @@ User-local ownership state is `$XDG_DATA_HOME/classic-find-plus/integration-stat
 Updates use a lock, fixed paths, content hashes and atomic replacement. Modified/untracked
 adapters are refused; back up custom work and review manually. A byte-exact supplied template
 can be adopted. Symlink paths, oversized files, duplicate CFP Thunar IDs and XML entities/DTD
-are refused. Thunar edits only CFP's action span; unrelated entries and bytes are retained.
+are refused. Thunar edits only CFP's action spans; unrelated entries and bytes are retained.
 Removing the application retains per-user integration choices/files; remove enabled adapters
 through Help/About first if desired. Retained entries cannot launch a removed executable.
+
+## Thunar administrator action
+
+Enable installs **Find with Classic Find Plus** and **Open as Administrator** together.
+Older enabled find-only installations show **Repair actions**; CLI `enable thunar` also
+reconciles them idempotently. Status/Refresh never changes your configuration. Disable
+and Remove remove both unchanged CFP-owned actions, not unrelated custom actions.
+Stable IDs are `org.classicfind.Plus.find` and `org.classicfind.Plus.open-admin`.
+Before changing existing XML, CFP retains a private `uca.xml.cfp-backup-<hash>` sibling;
+original XML mode/UID/GID and unrelated bytes survive the atomic update. Modified CFP
+actions, unsafe ownership/write permissions, symlinks and malformed XML are refused.
+Backups remain for manual recovery. Close Thunar's custom-action editor before changes.
+
+Right-click **one selected local folder** (including the filesystem root). Background
+context eligibility is determined by Thunar's UCA provider; selected-folder context is
+supported. The action is directory-only. A clearly equivalent independent action is
+retained without adding a second admin action or taking ownership. Detection deliberately
+accepts only exact directory/all-pattern argv forms: this helper with `-- %f`/`-- %u`, or
+`Thunar admin://%f` (also lowercase thunar). Similar labels and arbitrary shell wrappers
+are preserved and cannot reliably be identified as equivalent.
+
+`classic-find-plus-thunar-admin -- LOCATION` accepts an absolute local path or local
+`file:` URI. GIO encodes spaces, Unicode, quotes, #, %, &, and other filename bytes into
+an `admin:///` URI. Remote schemes/hosts, query/fragment/credential URIs, non-directories
+and ordinary missing paths are refused. Inaccessible local ancestors are delegated to
+GVfs. The helper refuses root execution and starts Thunar via an argv array; it never
+runs sudo, captures passwords or changes ownership/permissions of the selected folder.
+Thunar's supported `%f` field expansion quotes the single local path, including in
+Thunar 4.16; do not add shell quoting around `%f` in the template. Remote selections
+without a native path report that a local directory is required. Thunar/GVfs own mounting, authentication and location errors;
+a successful launch is not proof that authorization succeeded.
+
+See [administrative transfer steps and troubleshooting](permissions.md). No backend,
+authentication agent or file manager is installed automatically. Custom source prefixes
+must put their bin directory on the desktop session's PATH.
 
 CLI equivalent (substitute the installed PREFIX; never use sudo for user integrations):
 
@@ -73,7 +108,7 @@ chosen integration and requires CFP on the desktop session's PATH.
 The owner reports successful real context-menu launch and ordinary copy/move transfers,
 including destination replacement, in Nemo, Nautilus, Dolphin, Caja and Thunar with the
 preceding release. One intermittent Nemo replacement-copy observation remains unconfirmed;
-Phase 9 does not change integrations or transfer negotiation.
+Transfer negotiation remains unchanged.
 
 Ordinary URI drag-and-drop is separate from menu integration; those transfers do not verify privileged destinations.
 Administrative destinations depend on the receiving manager/backend and session (GVfs/Polkit

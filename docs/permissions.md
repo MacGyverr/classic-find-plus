@@ -8,19 +8,36 @@ explicit root override](admin-search.md) for authorization, limits and setup.
 
 Linux Mint workflow:
 
-1. Open Nemo and press F3 for split panes.
-2. Keep a normal source folder in one pane.
-3. In the destination pane press Ctrl+L and enter `admin:///opt/` or another protected directory.
-4. Authenticate when prompted.
-5. Open CFP from the normal folder and drag selected results into the administrative pane.
-6. Authenticate again if the receiving backend requests it.
+Nemo, GNOME Files (Nautilus) and Caja accept CFP drops into administrator-opened
+folders on the owner's tested systems. GNOME Files is Nautilus, using the same adapter.
+Thunar can open `admin:///opt`; CFP now adds its convenient **Open as Administrator**
+action. New Thunar administrative transfers still need real-desktop acceptance.
 
-Nemo and GVfs/Polkit handle the transfer and authorization. This workflow depends on the
-installed admin backend, a desktop authentication agent and session configuration. It is not
-a guarantee for every distribution or backend. A local protected folder without an authenticated
-administrative URI may simply reject a drop. The checkbox keeps CFP a regular-user application. Explicit --allow-root instead grants
-root permissions to every GUI feature, with a warning and separate root profile.
+1. Locate the protected destination directory in the file manager.
+2. Open it as Administrator using its available context-menu action. In Thunar,
+   enable CFP's Thunar integration first, then right-click one selected local folder
+   and choose **Open as Administrator**. Where supported, Ctrl+L and `admin:///opt/`
+   can open the destination directly; Nemo's F3 split panes are convenient.
+3. Authenticate if requested by GVfs/Polkit.
+4. Search in CFP as your normal user and select results.
+5. Drag those results into the administrator-opened destination.
+6. Let the receiving file manager perform the copy/move and any further authorization.
 
-Ctrl requests copy and Shift requests move; Nemo decides the operation. If authentication
+CFP's ordinary copy/move and drag-and-drop behavior is unchanged. Ctrl requests copy,
+Shift requests move; the receiving manager decides. Administrative destinations depend
+on the manager, distribution, installed GVfs admin backend and desktop Polkit agent.
+A protected ordinary local folder can reject a drop. If `admin://` is unavailable,
+check your distribution's GVfs package documentation (Ubuntu/Mint commonly provides
+it in `gvfs-backends`) and that a desktop authentication agent is running. Install any
+missing distribution package yourself; CFP never installs it automatically. A denied
+or cancelled prompt grants no access. Thunar/GVfs report authentication and location
+errors; the helper reports missing backend/program and launch failures.
+
+GVfs administrative access does not run the whole file manager as root. Keep CFP and
+Thunar running as your regular user. Allow admin search authorizes only CFP's read-only
+search worker, not later file operations. Dolphin's ordinary integration is preserved;
+Dolphin-specific administrative access/transfers are outside this change and unverified.
+
+Ctrl requests copy and Shift requests move; the receiving manager decides the operation. If authentication
 takes longer than the bounded synchronization window, rerun Find after transfer. Exports
 require a local/mounted writable destination: select another folder when Save reports denial.

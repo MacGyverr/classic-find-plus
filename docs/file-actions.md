@@ -53,3 +53,7 @@ permission errors are handled by the receiving file manager.
 Administrator search results retain ordinary file-operation permissions; worker authorization
 is never forwarded to actions or receiving managers. Explicit --allow-root instead runs the
 whole GUI with root authority; see [permissions](admin-search.md).
+
+For administrator-opened receiving folders in Nemo, GNOME Files (Nautilus), Caja and
+Thunar, see [transfer steps](permissions.md). Thunar Enable includes Open as Administrator.
+Dolphin administrative transfers remain unverified; ordinary drag-and-drop is unchanged.

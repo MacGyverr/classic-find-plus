@@ -4,6 +4,9 @@
 
 Example of a Find Plus normal search.
 
+<img width="3319" height="1757" alt="find-plus3" src="https://github.com/user-attachments/assets/2b82595f-d3c8-4fdb-830d-6e3ac1ed0796" />
+
+Example of a Find Plus hex content search.
 
 <img width="1521" height="1053" alt="find-plus2" src="https://github.com/user-attachments/assets/93e56d66-e61b-400e-97b8-0c0035f0e6ef" />
 
@@ -25,7 +28,7 @@ Windows 98 style Date search.
 Windows 98 style Advanced search.
 
 
-**Version 1.0.6** — a native Linux file and folder search application, inspired by the classic
+**Version 1.0.7** — a native Linux file and folder search application, inspired by the classic
 Find dialog and styled by your GTK3 desktop theme. Created by MacGyverr / ChatGPT.
 [GitHub project](https://github.com/MacGyverr/classic-find-plus) · GPL-3.0-or-later.
 
@@ -36,14 +39,14 @@ Results support fifteen configurable columns, exact Bytes/Bits, sorting, file ac
 multi-selection, drag-and-drop into Nemo, and CSV or tab-delimited TXT export.
 
 Linux Mint with Nemo is the primary platform. GTK3 runs on other Linux desktops with an X11
-or Wayland session; optional menus support Nemo, Nautilus, Dolphin, Caja and Thunar. Debian WSL2 is also used for
+or Wayland session; optional menus support Nemo, GNOME Files (Nautilus), Dolphin, Caja and Thunar. Debian WSL2 is also used for
 development verification. Fedora, Arch and openSUSE native builds are documented but have not
 been tested on those distributions. No Windows-native application is provided.
 
 ## Install a Debian package
 
 Download the DEB for **your distribution and architecture** from the project's Releases page
-when available. Building 1.0.6 does not imply its DEB has been published.
+when available. Building 1.0.7 does not imply its DEB has been published.
 Mint 21.3 uses Ubuntu 22.04 (jammy) libraries; a DEB built on newer Debian may not work there.
 Double-click the downloaded DEB to use your graphical package installer, or run:
 
@@ -173,20 +176,44 @@ Fresh installations enable no file-manager menus. Open **Help/About → File Man
 Refresh, Install the desired adapter, then Enable it. Disable/Remove affects only owned CFP
 entries. Optional packages are reported and never installed silently. Existing Nemo integration
 and saved user choices survive upgrades. Menus pass the selected folder ahead of saved Look in.
-Nautilus uses a native Python extension, Caja its Scripts menu, Dolphin a service menu, Thunar a safe custom action.
+GNOME Files (Nautilus) uses the existing native Python extension, Caja its Scripts menu,
+Dolphin a service menu. Thunar Enable installs both Find with Classic Find Plus and
+Open as Administrator; older enabled installs offer Repair actions. Disable/Remove
+removes only unchanged CFP actions and retains unrelated custom actions.
 Restart/reload requirements and CLI equivalents are in [integration instructions](docs/integrations.md).
 
 Linux Mint workflow:
 
-1. Open Nemo and press F3 for split panes.
-2. Open a normal folder in one pane.
-3. In the destination pane press Ctrl+L and enter `admin:///opt/` or another protected folder.
-4. Authenticate when prompted.
-5. Launch Classic Find Plus from the normal folder and drag selected results into the administrative pane.
+Nemo, GNOME Files (Nautilus) and Caja accept CFP drops into administrator-opened
+folders on the owner's tested systems. GNOME Files is Nautilus, using the same adapter.
+Thunar can open `admin:///opt`; CFP now adds its convenient **Open as Administrator**
+action. New Thunar administrative transfers still need real-desktop acceptance.
 
-Nemo and the installed GVfs/Polkit components manage authentication and transfers. Support
-varies by distribution/session; ordinary drops onto protected local paths may fail. Keep CFP
-running as your regular user. Ctrl requests copy, Shift requests move; the receiver decides.
+1. Locate the protected destination directory in the file manager.
+2. Open it as Administrator using its available context-menu action. In Thunar,
+   enable CFP's Thunar integration first, then right-click one selected local folder
+   and choose **Open as Administrator**. Where supported, Ctrl+L and `admin:///opt/`
+   can open the destination directly; Nemo's F3 split panes are convenient.
+3. Authenticate if requested by GVfs/Polkit.
+4. Search in CFP as your normal user and select results.
+5. Drag those results into the administrator-opened destination.
+6. Let the receiving file manager perform the copy/move and any further authorization.
+
+CFP's ordinary copy/move and drag-and-drop behavior is unchanged. Ctrl requests copy,
+Shift requests move; the receiving manager decides. Administrative destinations depend
+on the manager, distribution, installed GVfs admin backend and desktop Polkit agent.
+A protected ordinary local folder can reject a drop. If `admin://` is unavailable,
+check your distribution's GVfs package documentation (Ubuntu/Mint commonly provides
+it in `gvfs-backends`) and that a desktop authentication agent is running. Install any
+missing distribution package yourself; CFP never installs it automatically. A denied
+or cancelled prompt grants no access. Thunar/GVfs report authentication and location
+errors; the helper reports missing backend/program and launch failures.
+
+GVfs administrative access does not run the whole file manager as root. Keep CFP and
+Thunar running as your regular user. Allow admin search authorizes only CFP's read-only
+search worker, not later file operations. Dolphin's ordinary integration is preserved;
+Dolphin-specific administrative access/transfers are outside this change and unverified.
+
 [Permissions and limitations](docs/permissions.md) · [File actions](docs/file-actions.md).
 
 ## Searching, results and settings
