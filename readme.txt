@@ -1,10 +1,10 @@
-Classic Find Plus 1.0.7
+Classic Find Plus 1.0.9
 Created by MacGyverr / ChatGPT. GPL-3.0-or-later; see LICENSE and THIRD_PARTY.md.
 Project: https://github.com/MacGyverr/classic-find-plus
 Administrator search and the explicit root GUI work on the owner's Linux Mint 21.3 desktop.
 Real desktop denial/cancellation remains unreported; see docs/admin-search.md.
 
-Native Linux GTK3 file and folder search with optional Nemo/GNOME Files (Nautilus)/Dolphin/Caja/Thunar integration. See README.md for dependency
+Native Linux GTK3 file and folder search with optional Nemo/GNOME Files (Nautilus)/Dolphin/Caja/Thunar/GTK PCManFM/XFE integration. See README.md for dependency
 commands, GNU Make and Meson builds, features and troubleshooting.
 
 DEB installation/update: download the matching package and double-click it, or run
@@ -34,13 +34,14 @@ route with package ownership checks. Prefer Make or a native package for removab
 Linux Mint workflow:
 
 Nemo, GNOME Files (Nautilus) and Caja accept CFP drops into administrator-opened
-folders on the owner's tested systems. GNOME Files is Nautilus, using the same adapter.
+folders on the owner's tested systems. GNOME Files is Nautilus, using the same adapter. Its CFP integration supplies both
+Find and Open as Administrator, preserving recognized compatible independent admin extensions.
 Thunar can open `admin:///opt`; CFP now adds its convenient **Open as Administrator**
 action. New Thunar administrative transfers still need real-desktop acceptance.
 
 1. Locate the protected destination directory in the file manager.
-2. Open it as Administrator using its available context-menu action. In Thunar,
-   enable CFP's Thunar integration first, then right-click one selected local folder
+2. Open it as Administrator using its available context-menu action. In GNOME Files or Thunar,
+   enable that manager's CFP integration first, then right-click one selected local folder
    and choose **Open as Administrator**. Where supported, Ctrl+L and `admin:///opt/`
    can open the destination directly; Nemo's F3 split panes are convenient.
 3. Authenticate if requested by GVfs/Polkit.
@@ -55,11 +56,11 @@ A protected ordinary local folder can reject a drop. If `admin://` is unavailabl
 check your distribution's GVfs package documentation (Ubuntu/Mint commonly provides
 it in `gvfs-backends`) and that a desktop authentication agent is running. Install any
 missing distribution package yourself; CFP never installs it automatically. A denied
-or cancelled prompt grants no access. Thunar/GVfs report authentication and location
+or cancelled prompt grants no access. Nautilus/Thunar/GVfs report authentication and location
 errors; the helper reports missing backend/program and launch failures.
 
 GVfs administrative access does not run the whole file manager as root. Keep CFP and
-Thunar running as your regular user. Allow admin search authorizes only CFP's read-only
+GNOME Files and Thunar running as your regular user. Allow admin search authorizes only CFP's read-only
 search worker, not later file operations. Dolphin's ordinary integration is preserved;
 Dolphin-specific administrative access/transfers are outside this change and unverified.
 
@@ -130,3 +131,29 @@ boundary matches and early exit are supported. Stop may wait for blocked I/O.
 Devices and unsafe kernel pseudo-filesystems are skipped, including in root mode.
 No document/archive extraction; see docs/content-search.md for UTF-8, privilege
 and filesystem limitations. Protected matches require explicit authorization.
+
+GNOME Files (Nautilus) integration
+--------------------------------
+Enable its single entry in Help/About for Find and Open as Administrator (fallback only
+when no recognized compatible independent admin extension is found). Older owned adapters
+offer Repair actions. Supports Nautilus API 3.0 and4.x without importing GTK3 into GTK4.
+Configured (unavailable) reports optional Python/typelib/provider failures. Install matching
+distro python3-nautilus/python3-gi/introspection packages yourself if needed; CFP never
+installs dependencies. Finish transfers and restart Nautilus or log out/in after changes.
+Disable/Remove touch only CFP-owned unchanged content. See docs/integrations.md for
+coexistence limits, diagnostics and CLI controls; docs/permissions.md for protected drops.
+
+PCManFM (GTK) and XFE integrations
+--------------------------------
+Enable each separately in Help/About → File Manager Integrations. GTK PCManFM uses
+libfm's supported custom actions (libfm-modules); PCManFM-Qt is a different application
+and is not enabled by this adapter. Find searches one selected local folder; background
+availability depends on the installed libfm menu provider. XFE uses Scripts → Find with
+Classic Find Plus: one folder searches itself, one regular file searches its parent,
+XFE1.45 requires a selection for its Scripts submenu; its empty background has no
+Scripts entry. The launcher accepts no arguments when invoked separately from a folder.
+Restart the manager after changes.
+Other custom actions/scripts remain intact. PCManFM administrator enumeration and
+XFE GVfs administrative support are unverified; CFP supplies neither an administrator
+action nor a claim of privileged transfer support for them. Never start them as root
+for CFP integration. See docs/integrations.md and docs/permissions.md.

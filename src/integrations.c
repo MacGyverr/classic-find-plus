@@ -1,11 +1,11 @@
 #include "integrations.h"
 #include "config.h"
 
-static const char *managers[] = { "nemo", "nautilus", "dolphin", "caja", "thunar" };
-static const char *manager_names[] = { "Nemo", "GNOME Files (Nautilus)", "Dolphin", "Caja", "Thunar" };
+static const char *managers[] = { "nemo", "nautilus", "dolphin", "caja", "thunar", "pcmanfm", "xfe" };
+static const char *manager_names[] = { "Nemo", "GNOME Files (Nautilus)", "Dolphin", "Caja", "Thunar", "PCManFM (GTK)", "XFE" };
 typedef struct {
-    GtkWidget *box, *message, *labels[5], *install[5], *enable[5], *remove[5];
-    gboolean enabled[5], closed;
+    GtkWidget *box, *message, *labels[G_N_ELEMENTS(managers)], *install[G_N_ELEMENTS(managers)], *enable[G_N_ELEMENTS(managers)], *remove[G_N_ELEMENTS(managers)];
+    gboolean enabled[G_N_ELEMENTS(managers)], closed;
     GSubprocess *process;
     GCancellable *cancel;
     char *operation;
@@ -48,13 +48,15 @@ static void finished(GObject *object, GAsyncResult *result, gpointer data)
             gboolean detected = g_key_file_get_boolean(keys, name, "detected", NULL);
             gboolean installed = g_key_file_get_boolean(keys, name, "installed", NULL);
             s->enabled[i] = g_key_file_get_boolean(keys, name, "enabled", NULL);
+            if (g_strcmp0(name, "nemo"))
+                s->enabled[i] = g_key_file_get_boolean(keys, name, "configured", NULL);
             gboolean reload = g_key_file_get_boolean(keys, name, "reload", NULL);
             g_autofree char *missing = g_key_file_get_string(keys, name, "missing", NULL);
             g_autofree char *version = g_key_file_get_string(keys, name, "version", NULL);
             g_autofree char *method = g_key_file_get_string(keys, name, "method", NULL);
             g_autofree char *label = g_strdup_printf("%s%s%s · %s · %s%s%s%s",
                 detected ? "Detected" : "Not detected", version && *version ? " " : "", version ? version : "",
-                installed ? "Installed" : "Not installed", s->enabled[i] ? "Enabled" : "Disabled",
+                installed ? "Installed" : "Not installed", s->enabled[i] ? (!g_key_file_get_boolean(keys, name, "available", NULL) ? "Configured (unavailable)" : "Enabled") : "Disabled",
                 missing && *missing ? " · Missing: " : "", missing ? missing : "",
                 reload ? " · Restart/reload needed" : "");
             gtk_label_set_text(GTK_LABEL(s->labels[i]), label);
@@ -64,11 +66,11 @@ static void finished(GObject *object, GAsyncResult *result, gpointer data)
             }
             gboolean switch_caja = !g_strcmp0(name, "caja") &&
                 g_key_file_get_boolean(keys, name, "legacy_extension", NULL);
-            gboolean repair_thunar = !g_strcmp0(name, "thunar") &&
+            gboolean repair_actions = (!g_strcmp0(name, "thunar") || !g_strcmp0(name, "nautilus")) &&
                 g_key_file_get_boolean(keys, name, "needs_update", NULL);
-            gtk_widget_set_sensitive(s->install[i], !installed || switch_caja || repair_thunar);
-            gtk_button_set_label(GTK_BUTTON(s->install[i]), switch_caja ? "Switch to Scripts" : repair_thunar ? "Repair actions" : "Install");
-            g_object_set_data(G_OBJECT(s->install[i]), "operation", switch_caja || repair_thunar ? "enable" : "install");
+            gtk_widget_set_sensitive(s->install[i], !installed || switch_caja || repair_actions);
+            gtk_button_set_label(GTK_BUTTON(s->install[i]), switch_caja ? "Switch to Scripts" : repair_actions ? "Repair actions" : "Install");
+            g_object_set_data(G_OBJECT(s->install[i]), "operation", switch_caja || repair_actions ? "enable" : "install");
             gtk_widget_set_sensitive(s->enable[i], installed);
             gtk_button_set_label(GTK_BUTTON(s->enable[i]), s->enabled[i] ? "Disable" : "Enable");
             gtk_widget_set_sensitive(s->remove[i], installed);
@@ -128,7 +130,7 @@ GtkWidget *cf_integrations_new(void)
     gtk_box_pack_start(GTK_BOX(s->box), title, FALSE, FALSE, 0);
     s->message = gtk_label_new("Optional user-local menus. Install registers a disabled adapter; Enable activates it. "
         "Remove deletes only unchanged CFP-owned entries. Dependencies are never installed automatically. "
-        "Caja uses Scripts > Find with Classic Find Plus. Thunar Enable includes Find and Open as Administrator; Repair actions upgrades older installs. Restart the manager after changes. "
+        "Caja and XFE use Scripts > Find with Classic Find Plus. GTK PCManFM uses libfm custom actions; PCManFM-Qt is separate. PCManFM/XFE administrator support is unverified. GNOME Files and Thunar Enable include Find and Open as Administrator; Repair actions upgrades older installs. GNOME Files requires matching optional Python/GI support; configured-unavailable status explains failures. Restart the manager after changes. "
         "Existing system Nemo actions are retained; Enable/Disable uses Nemo’s per-user preference.");
     gtk_label_set_line_wrap(GTK_LABEL(s->message), TRUE);
     gtk_label_set_line_wrap_mode(GTK_LABEL(s->message), PANGO_WRAP_WORD_CHAR);

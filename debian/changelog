@@ -1,3 +1,18 @@
+classic-find-plus (1.0.9-1) unstable; urgency=medium
+
+  * Add opt-in GTK PCManFM custom actions and XFE Scripts support.
+  * Fix Nautilus selected/background callback collisions and verify native menus.
+  * Keep integration status read-only and report unavailable configurations accurately.
+
+ -- MacGyverr / ChatGPT <classic-find@localhost>  Mon, 12 Oct 2026 14:00:00 -0700
+
+classic-find-plus (1.0.8-1) unstable; urgency=medium
+
+  * Repair legacy/modern Nautilus integration, optional dependency diagnostics and upgrades.
+  * Add normal-user administrator-folder fallback with GVfs/Polkit authorization.
+
+ -- MacGyverr / ChatGPT <classic-find@localhost>  Mon, 12 Oct 2026 12:00:00 -0700
+
 classic-find-plus (1.0.7-1) unstable; urgency=medium
 
   * Add paired Thunar administrative-folder action and safe normal-user URI helper.

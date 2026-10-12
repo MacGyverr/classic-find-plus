@@ -120,3 +120,7 @@ include/thunar-admin.h
 src/thunar-admin.c
 helpers/thunar-admin-main.c
 data/integrations/classic-find-plus-thunar-admin.xml
+helpers/nautilus-admin-main.c
+scripts/nautilus-support.py
+data/integrations/classic-find-plus-pcmanfm.desktop
+data/integrations/classic-find-plus-xfe.py

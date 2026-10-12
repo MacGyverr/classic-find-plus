@@ -9,13 +9,14 @@ another version through PATH and desktop action lookup. Do not overwrite package
 Both build systems install the same functional files under PREFIX:
 
 - `bin/classic-find-plus`, plus compatibility symlink `bin/classic-find`.
-- `bin/classic-find-plus-thunar-admin` (0755, normal user; never setuid).
+- `bin/classic-find-plus-thunar-admin` and `bin/classic-find-plus-nautilus-admin`
+  (0755, normal user; never setuid).
 - `share/applications/org.classicfind.Plus.desktop`.
 - `libexec/classic-find-plus-search-worker` (0755, never setuid).
 - `share/dbus-1/system-services` activation and `share/dbus-1/system.d` bus policy.
 - `share/polkit-1/actions/org.classicfind.plus.search.policy` (0644).
 - `share/classic-find-plus/integration-manager.py`, `accounts.py` (read-only NSS catalog)
-  and inactive `integrations/` templates.
+  `nautilus-support.py` (isolated optional-support probe) and inactive `integrations/` templates.
 - `share/icons/hicolor/16x16/apps/classic-find-plus.png`.
 - `share/doc/classic-find-plus/`: license, README/readme, changelog, asset notices and public docs.
 
@@ -103,4 +104,6 @@ The installed `classic-find-plus-thunar-admin` helper is a normal mode-0755 exec
 not setuid. Thunar Enable adds both folder actions; fresh installs activate none.
 GVfs admin support and a desktop Polkit agent are optional for administrative folders;
 see [integration setup](integrations.md) and [transfer troubleshooting](permissions.md).
-GNOME Files (Nautilus) keeps the existing Nautilus adapter and dependencies.
+GNOME Files (Nautilus) Enable configures Find and the administrator fallback in one
+user-local extension. Its matching Python/GI/Nautilus provider is optional; see the
+integration guide for configured-but-unavailable status, Repair actions and restart steps.

@@ -33,3 +33,35 @@ before confirming. Unrelated destination files and Git metadata are untouched. C
 obsolete files are retained with a warning; unchanged previously published obsolete files
 are listed for deletion. Unsafe paths, junctions, unreadable inputs and files changing
 after preview still stop synchronization.
+
+## Native Linux maintainer workflow
+
+The private development workspace provides `scripts/publish-to-linux.py`; keep it there,
+alongside `publish-to-windows.ps1`. Both read the same `public-files.txt` and compatible
+`.cfp-publication.json` ownership hashes. Neither tool is installed with CFP or required
+to build the public source. Native Linux needs Python3 and Git; Windows uses PowerShell.
+
+```sh
+python3 scripts/publish-to-linux.py --preview
+python3 scripts/publish-to-linux.py --sync
+```
+
+Native defaults use the script's development root and `~/Documents/GitHub/classic-find-plus`.
+Use `--source` and `--destination` for separate disposable/workspace paths. The destination
+must already be the root of a normal Git working tree. Missing roots, filesystem roots,
+nested/same roots, symlinks and unsafe/private manifest entries are refused. No Git metadata,
+branch, remotes, index, commits or pushes are changed by the tool. Preview creates no lock,
+staging or state files. Warnings identify current source files that would overwrite local
+or staged edits; exact `YES` confirmation is required by `--sync`. As with the Windows
+publisher, approved source wins after confirmation. Preserve local edits separately first.
+Unrelated files and modified obsolete files stay; only unchanged previously owned obsolete
+files can be deleted. Paths are passed directly, without shell evaluation.
+
+New/updated bytes are staged and hash-checked before applying files. Each replacement is
+atomic and per-file progress is saved privately. A failure can leave a partly completed
+publication; review reported applied files and rerun Preview before confirming a resume.
+Normal failures clean their staging/lock; forced termination may leave a lock or staging
+folder, which is deliberately refused/preserved for manual review. This is not a global
+rollback transaction. Do not remove a lock while a publisher is still active. Builds never
+invoke either publisher. Synchronizing a real working repository remains a separate explicit
+maintainer action; review changes in GitHub Desktop before deciding to commit/push.

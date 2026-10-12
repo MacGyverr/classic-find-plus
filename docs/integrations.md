@@ -10,10 +10,12 @@ CFP never installs dependencies or additional file managers, nor restarts one au
 | Manager | Supported adapter | Optional dependency / user location |
 | --- | --- | --- |
 | Nemo | single-directory `.nemo_action` | Nemo and `gsettings`; `$XDG_DATA_HOME/nemo/actions` |
-| GNOME Files (Nautilus) | native Python MenuProvider, 3.x/4.0/4.1 signatures | distro `python3-nautilus`, Python GI and Nautilus typelib; `$XDG_DATA_HOME/nautilus-python/extensions` |
+| GNOME Files (Nautilus) | native Python MenuProvider, 3.0/4.0/4.1 Find + administrator menus | distro `python3-nautilus`, Python GI and Nautilus typelib; `$XDG_DATA_HOME/nautilus-python/extensions` |
 | Dolphin | KDE service menu, directory MIME type | Dolphin/KIO; `$XDG_DATA_HOME/kio/servicemenus` (Frameworks ≥5.85) |
 | Caja | executable Scripts menu launcher | Python 3; `$XDG_CONFIG_HOME/caja/scripts/Find with Classic Find Plus` |
 | Thunar | Find + Open as Administrator directory actions | Thunar UCA plugin; `$XDG_CONFIG_HOME/Thunar/uca.xml` |
+| PCManFM (GTK) | libfm Find custom action | GTK PCManFM, `libfm-modules`; `$XDG_DATA_HOME/file-manager/actions/classic-find-plus-pcmanfm.desktop` |
+| XFE | executable Scripts menu launcher | XFE, Python3; `~/.config/xfe/scripts/Find with Classic Find Plus` |
 
 XDG_DATA_HOME normally means `~/.local/share`, XDG_CONFIG_HOME `~/.config`. All adapters
 launch the same `classic-find-plus -- LOCATION`. Python adapters use an argv array; native
@@ -55,6 +57,67 @@ can be adopted. Symlink paths, oversized files, duplicate CFP Thunar IDs and XML
 are refused. Thunar edits only CFP's action spans; unrelated entries and bytes are retained.
 Removing the application retains per-user integration choices/files; remove enabled adapters
 through Help/About first if desired. Retained entries cannot launch a removed executable.
+
+## GNOME Files (Nautilus)
+
+One user-local Python extension provides **Find with Classic Find Plus** and, when needed,
+**Open as Administrator** for a single selected local directory or its background. Find
+opens CFP at that folder without starting a search. API 3.0 covers pre43 Nautilus; API 4.0/4.1
+covers newer compatible versions, including Nautilus 46.4/API 4.0. The extension honors the
+loader's GI version and never imports GTK3 into Nautilus's GTK4 process.
+
+Enable the single **GNOME Files (Nautilus)** entry in Help/About. Refresh probes the matching
+GI typelib, native Python provider dependencies and CFP GObject/menu initialization in a
+separate bounded process. **Configured (unavailable)** means the user extension is enabled
+on disk but required support cannot load; it does not promise a working menu. Disable
+remains available. A successful probe still requires a Nautilus restart and menu check.
+Custom provider library prefixes may need distribution-specific setup; the probe checks
+standard distro library locations. Status never installs packages or edits extensions.
+
+Ubuntu/Mint/Debian normally need `python3-nautilus`, `python3-gi` and the matching Nautilus
+introspection package (`gir1.2-nautilus-3.0` or `gir1.2-nautilus-4.0`). Use your distribution's
+package manager to install reported missing dependencies. CFP does not request credentials
+or silently install them. Python support remains optional for every other CFP function.
+
+Older unchanged CFP extensions show **Repair actions**. CLI `enable nautilus` performs the
+same atomic reconciliation, including recovery of the exact old template if ownership state
+was lost. Modified, unsafe or unrecognized files require manual review. Disable removes the
+active CFP extension but retains registration; Remove also removes that registration. Neither
+operation touches independent administrator extensions or shared packages. File mode is 0644.
+
+Before adding its administrator item, CFP inspects bounded source of known `NautilusAdmin`
+implementations without executing them. It checks matching GI API, callback signatures,
+directory-menu semantics and direct normal-user Nautilus launch; renamed equivalents can
+be recognized. The Ubuntu legacy nautilus-admin 1.1.9 implementation uses API 3.0/GTK3 and
+is not treated as compatible in an API4 process. A recognized compatible candidate suppresses
+only CFP's admin item; Find remains. This conservative inspection cannot prove arbitrary
+third-party extensions work or recognize every equivalent. Unknown extensions remain
+untouched and may still provide their own item; actual loading/restart must be checked.
+
+The separate normal-user `classic-find-plus-nautilus-admin -- LOCATION` helper reuses the
+Thunar helper's checked native-path/file-URI conversion to escaped `admin:///` locations.
+Remote locations are not offered either action. Missing/disappeared directories, invalid
+URIs, absent Nautilus/backend and launch errors are reported without a shell or root file
+manager. Inaccessible local ancestors are delegated to GVfs. Nautilus/GVfs/Polkit own
+mounting, agent/authentication, cancellation/denial and destination errors; process launch
+success is not proof of authorization. CFP never handles passwords.
+
+After finishing transfers, close all Nautilus windows/processes and reopen it, or log out/in.
+A deliberate `nautilus -q` can close its processes; do not use it during transfers. If menus
+remain absent, collect `nautilus --version`, integration-manager `status`, and launch diagnostics
+from `NAUTILUS_PYTHON_DEBUG=all nautilus` after a full restart, plus relevant session journal
+messages. Check for other extensions shadowing the same basename and matching distro API
+packages. Do not delete or patch system extensions to try to make CFP load.
+
+Native Mint Nautilus46.4/API4.0 diagnosis found missing `python3-nautilus` and
+`gir1.2-nautilus-4.0`. After their installation, actual provider loading, selected-folder
+and background menus show both CFP actions; Find launches CFP. Earlier API3.0 library
+checks and API4.1 callback fixtures remain compatibility coverage, not live-version
+claims. Distinct selected/background action IDs prevent Nautilus4’s background action from
+replacing the selected-directory callback. Current tests do not revalidate administrator
+authentication or transfers.
+
+See [administrator transfer workflow](permissions.md) for protected destinations.
 
 ## Thunar administrator action
 
@@ -125,3 +188,34 @@ Mechanisms follow upstream [Nautilus Python](https://gnome.pages.gitlab.gnome.or
 [Dolphin service menus](https://develop.kde.org/docs/apps/dolphin/service-menus/),
 [Thunar custom actions](https://docs.xfce.org/xfce/thunar/custom-actions) and
 [Nemo action manager](https://github.com/linuxmint/nemo/blob/master/libnemo-private/nemo-action-manager.c).
+
+## PCManFM (GTK)
+
+Enable the separate PCManFM (GTK) row. CFP installs a libfm custom action, preserving
+unrelated files; Install alone keeps it disabled. Restart PCManFM after changes.
+One selected local directory shows Find with Classic Find Plus and opens CFP there.
+TargetLocation also requests the current-folder background action where libfm supports it.
+The template uses libfm's absolute-local-folder glob, directory MIME and single-selection
+conditions. It avoids libfm1.3.2's crashing Schemes condition; no file-manager files are
+patched. Native GTK PCManFM1.3.2/libfm1.3.2 selected-folder and restarted background menus
+and exact child/current-folder CFP URI launches were executed.
+PCManFM-Qt has a different integration mechanism and is outside this adapter.
+
+The authorized read-only `admin:///opt` probe did not demonstrate authenticated directory
+enumeration in the isolated session. CFP consequently supplies no Open as Administrator
+PCManFM action. Administrative transfers are unverified. This is not a claim that every
+PCManFM/GVfs build lacks the capability; confirm it separately before extending support.
+
+## XFE
+
+Enable XFE, then restart it. Right-click → Scripts → Find with Classic Find Plus uses
+XFE's documented executable-script directory `~/.config/xfe/scripts` (the literal HOME
+location used by XFE1.45). One selected folder searches itself, one regular file searches
+its parent, XFE1.45's empty background has no Scripts submenu: select one item first. When invoked
+separately without arguments, the launcher uses its working directory.
+Multiple, nonexistent and remote selections are refused. Paths are separate argv values;
+spaces, Unicode, quotes and shell punctuation cannot become commands. Disable/Remove
+only remove the exact unchanged CFP script; unrelated scripts/configuration stay intact.
+Native XFE1.45's Scripts menu and actual selected-folder CFP launch were executed.
+XFE's local-filesystem/root-launch features do not demonstrate a safe GVfs administrative
+workflow. CFP offers no XFE administrator action and does not launch XFE as root.

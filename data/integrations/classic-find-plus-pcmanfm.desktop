@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Action
+Name=Find with Classic Find Plus
+Icon=classic-find-plus
+Profiles=FindPlus;
+TargetContext=true
+TargetLocation=true
+Folders=/*;
+MimeTypes=inode/directory;
+SelectionCount==1
+
+[X-Action-Profile FindPlus]
+Name=Find with Classic Find Plus
+Exec=classic-find-plus -- %u

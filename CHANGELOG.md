@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.0.9
+
+- Add opt-in GTK PCManFM/libfm custom actions and XFE Scripts integration, with safe
+  local arguments, independent choices and content-checked removal.
+- Fix Nautilus selected/background action ID collisions that opened the parent folder.
+- Diagnose native Nautilus46.4 missing Python provider/typelib; verify real directory
+  and background menus after installation and restart.
+- Keep integration Refresh read-only by querying installed package versions without
+  launching file managers; distinguish configured from available across adapters.
+- Document seven managers and unverified PCManFM/XFE administrative transfers.
+- Add a private native Linux preview-first publisher sharing the Windows public allowlist;
+  public repositories remain independent and publication requires confirmation.
+
+## 1.0.8
+
+- Repair GNOME Files (Nautilus) integration with loader-aware API 3.0/4.x support,
+  safe native-directory URI launches and contained errors.
+- Add Open as Administrator in the same opt-in extension using a separate normal-user
+  helper and GVfs/Polkit; preserve recognized compatible independent admin providers.
+- Probe optional native Python/GI support, report configured-but-unavailable states,
+  and repair unchanged older CFP extensions without touching unrelated providers.
+- Update Help/About, integration diagnostics and administrator-transfer documentation.
+- Preserve search, drag-and-drop and the other four file-manager implementations.
+
 ## 1.0.7
 
 Thunar Enable now includes a normal-user Open as Administrator folder action using

@@ -33,7 +33,8 @@ def safe_path(path):
             fail('Non-directory ancestor: ' + str(part))
 
 def plan():
-    entries = {'bin/classic-find-plus-thunar-admin': 'build-make/classic-find-plus-thunar-admin',
+    entries = {'bin/classic-find-plus-nautilus-admin': 'build-make/classic-find-plus-nautilus-admin',
+               'bin/classic-find-plus-thunar-admin': 'build-make/classic-find-plus-thunar-admin',
                'bin/classic-find-plus': 'build-make/classic-find-plus',
                'bin/classic-find': '@classic-find-plus',
                'share/applications/org.classicfind.Plus.desktop': 'data/desktop/org.classicfind.Plus.desktop',
@@ -44,9 +45,11 @@ def plan():
         'share/dbus-1/system.d/org.classicfind.Plus.Search.conf': 'data/privileged/org.classicfind.Plus.Search.conf',
         'share/polkit-1/actions/org.classicfind.plus.search.policy': 'data/privileged/org.classicfind.plus.search.policy',
         'share/classic-find-plus/accounts.py': 'scripts/accounts.py',
-        'share/classic-find-plus/integration-manager.py': 'scripts/integration-manager.py'})
+        'share/classic-find-plus/integration-manager.py': 'scripts/integration-manager.py',
+        'share/classic-find-plus/nautilus-support.py': 'scripts/nautilus-support.py'})
     for name in ['classic-find-plus.nemo_action', 'classic-find-plus-nautilus.py', 'classic-find-plus-caja.py',
-                 'classic-find-plus.desktop', 'classic-find-plus-thunar.xml', 'classic-find-plus-thunar-admin.xml', 'classic-find-plus-caja-script.py']:
+                 'classic-find-plus.desktop', 'classic-find-plus-thunar.xml', 'classic-find-plus-thunar-admin.xml', 'classic-find-plus-caja-script.py',
+    'classic-find-plus-pcmanfm.desktop', 'classic-find-plus-xfe.py']:
         entries['share/classic-find-plus/integrations/' + name] = 'data/integrations/' + name
     for name in ['LICENSE', 'README.md', 'readme.txt', 'CHANGELOG.md', 'THIRD_PARTY.md']:
         entries['share/doc/classic-find-plus/' + name] = name

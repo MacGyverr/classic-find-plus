@@ -9,13 +9,14 @@ explicit root override](admin-search.md) for authorization, limits and setup.
 Linux Mint workflow:
 
 Nemo, GNOME Files (Nautilus) and Caja accept CFP drops into administrator-opened
-folders on the owner's tested systems. GNOME Files is Nautilus, using the same adapter.
+folders on the owner's tested systems. GNOME Files is Nautilus. Its CFP integration adds Find and an Open as Administrator
+fallback when no recognized compatible independent action is found.
 Thunar can open `admin:///opt`; CFP now adds its convenient **Open as Administrator**
 action. New Thunar administrative transfers still need real-desktop acceptance.
 
 1. Locate the protected destination directory in the file manager.
-2. Open it as Administrator using its available context-menu action. In Thunar,
-   enable CFP's Thunar integration first, then right-click one selected local folder
+2. Open it as Administrator using its available context-menu action. In GNOME Files or Thunar,
+   enable that manager's CFP integration first, then right-click one selected local folder
    and choose **Open as Administrator**. Where supported, Ctrl+L and `admin:///opt/`
    can open the destination directly; Nemo's F3 split panes are convenient.
 3. Authenticate if requested by GVfs/Polkit.
@@ -30,14 +31,19 @@ A protected ordinary local folder can reject a drop. If `admin://` is unavailabl
 check your distribution's GVfs package documentation (Ubuntu/Mint commonly provides
 it in `gvfs-backends`) and that a desktop authentication agent is running. Install any
 missing distribution package yourself; CFP never installs it automatically. A denied
-or cancelled prompt grants no access. Thunar/GVfs report authentication and location
+or cancelled prompt grants no access. Nautilus/Thunar/GVfs report authentication and location
 errors; the helper reports missing backend/program and launch failures.
 
 GVfs administrative access does not run the whole file manager as root. Keep CFP and
-Thunar running as your regular user. Allow admin search authorizes only CFP's read-only
+GNOME Files and Thunar running as your regular user. Allow admin search authorizes only CFP's read-only
 search worker, not later file operations. Dolphin's ordinary integration is preserved;
 Dolphin-specific administrative access/transfers are outside this change and unverified.
 
 Ctrl requests copy and Shift requests move; the receiving manager decides the operation. If authentication
 takes longer than the bounded synchronization window, rerun Find after transfer. Exports
 require a local/mounted writable destination: select another folder when Save reports denial.
+
+GTK PCManFM and XFE now have optional Find integrations. PCManFM's isolated admin URI
+probe did not verify authenticated enumeration; XFE's safe GVfs administrative workflow
+is unverified. CFP installs no administrator action for either and makes no administrative
+transfer claim. Use the already supported, separately configured receiving manager above.

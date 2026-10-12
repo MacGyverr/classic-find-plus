@@ -57,3 +57,6 @@ whole GUI with root authority; see [permissions](admin-search.md).
 For administrator-opened receiving folders in Nemo, GNOME Files (Nautilus), Caja and
 Thunar, see [transfer steps](permissions.md). Thunar Enable includes Open as Administrator.
 Dolphin administrative transfers remain unverified; ordinary drag-and-drop is unchanged.
+
+Optional GTK PCManFM and XFE Find menus do not imply administrative receiving support.
+Their protected-destination transfers remain unverified; see permissions.md.

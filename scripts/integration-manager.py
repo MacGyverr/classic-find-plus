@@ -16,9 +16,10 @@ import sys
 import tempfile
 from xml.parsers import expat
 
-MANAGERS = ('nemo', 'nautilus', 'dolphin', 'caja', 'thunar')
+MANAGERS = ('nemo', 'nautilus', 'dolphin', 'caja', 'thunar', 'pcmanfm', 'xfe')
 TEMPLATES = dict(zip(MANAGERS, ('classic-find-plus.nemo_action', 'classic-find-plus-nautilus.py',
-    'classic-find-plus.desktop', 'classic-find-plus-caja.py', 'classic-find-plus-thunar.xml')))
+    'classic-find-plus.desktop', 'classic-find-plus-caja.py', 'classic-find-plus-thunar.xml',
+    'classic-find-plus-pcmanfm.desktop', 'classic-find-plus-xfe.py')))
 RESOURCE = Path(__file__).resolve().parent / 'integrations'
 if not RESOURCE.is_dir():
     RESOURCE = Path(__file__).resolve().parent.parent / 'data/integrations'
@@ -60,15 +61,28 @@ def atomic(path, data, previous, mode=0o600, ownership=None):
 def version(manager):
     program = shutil.which('Thunar' if manager == 'thunar' else manager)
     if not program: return ''
+    # GUI --version handlers can initialize Tracker, Xfconf and preferences before
+    # parsing options. Status must not launch a file manager. Query distro metadata.
     try:
-        result = subprocess.run([program, '--version'], capture_output=True, text=True, timeout=2)
-        match = re.search(r'\b(\d+)\.(\d+)(?:\.\d+)?', result.stdout + result.stderr)
-        return match.group(0) if match else 'detected (version unknown)'
+        if Path(program).parent not in (Path('/usr/bin'), Path('/bin')):
+            return 'detected (version unknown)'
+        if shutil.which('dpkg-query'):
+            args = ['dpkg-query', '-W', '-f=${Version}', manager]
+        elif shutil.which('rpm'):
+            args = ['rpm', '-q', '--qf', '%{VERSION}', manager]
+        else:
+            return 'detected (version unknown)'
+        result = subprocess.run(args, capture_output=True, text=True, timeout=2)
+        match = re.match(r'^(?:\d+:)?(\d+\.\d+(?:\.\d+)?)', result.stdout)
+        return match.group(1) if result.returncode == 0 and match else 'detected (version unknown)'
     except (OSError, subprocess.TimeoutExpired):
         return 'detected (version unavailable)'
 
+
 def path_for(manager, data, config, entry):
     if manager == 'thunar': return config / 'Thunar/uca.xml'
+    if manager == 'pcmanfm': return data / 'file-manager/actions/classic-find-plus-pcmanfm.desktop'
+    if manager == 'xfe': return Path.home() / '.config/xfe/scripts/Find with Classic Find Plus'
     if manager == 'caja': return config / 'caja/scripts/Find with Classic Find Plus'
     if manager == 'dolphin':
         # Frameworks >=5.85 use kio/servicemenus. Dolphin 21.08+ normally
@@ -207,8 +221,35 @@ def thunar_update(operation, path, original, entry):
     entry.update(installed=True, reload=True)
     return entry
 
+LEGACY_NAUTILUS_HASH = '8d58d49a8826e0f5432537e74073817b175066eaf816ae29c5146b2e6d87f44e'
+
+def nautilus_support():
+    program = shutil.which('nautilus')
+    if not program:
+        return {'ready': False, 'api': '', 'admin': '', 'detail': 'GNOME Files (nautilus) is not installed'}
+    match = re.match(r'(\d+)', version('nautilus'))
+    expected = ('3' if int(match[1]) < 43 else '4') if match else 'unknown'
+    helper = Path(__file__).resolve().parent / 'nautilus-support.py'
+    try:
+        result = subprocess.run(['/usr/bin/python3', str(helper), str(RESOURCE / TEMPLATES['nautilus']), expected],
+            capture_output=True, text=True, timeout=5)
+        response = json.loads(result.stdout)
+        if not isinstance(response, dict) or not isinstance(response.get('ready'), bool):
+            raise ValueError('Invalid support response')
+        return response
+    except (OSError, ValueError, subprocess.TimeoutExpired) as error:
+        return {'ready': False, 'api': '', 'admin': '', 'detail': 'Nautilus support probe failed: ' + str(error)}
+
 def optional(manager):
-    if manager not in ('nautilus', 'caja'): return ''
+    if manager == 'nautilus':
+        support = nautilus_support()
+        return '' if support['ready'] else support['detail'] + '; install distro python3-nautilus, python3-gi and matching Nautilus typelib, then Refresh'
+    if manager == 'pcmanfm':
+        roots = (Path('/usr/lib'), Path('/usr/lib64'), Path('/usr/local/lib'))
+        found = any(list(base.glob('libfm/modules/gtk-menu-actions.so'))
+                    for root in roots for base in (root, *root.glob('*-linux-gnu')))
+        return '' if found else 'GTK PCManFM requires libfm custom-action module (distro libfm-modules); PCManFM-Qt is not supported'
+    if manager != 'caja': return ''
     namespace = manager.capitalize() if manager == 'caja' else 'Nautilus'
     code = "import gi; from gi.repository import GIRepository; r=GIRepository.Repository.get_default(); assert r.enumerate_versions(%r)" % namespace
     result = subprocess.run([sys.executable, '-c', code], capture_output=True, timeout=3)
@@ -259,18 +300,32 @@ def status(manager, entry, data, config):
     enabled = enabled or (legacy and active is None)
     legacy_caja = read(data / 'caja-python/extensions' / TEMPLATES['caja']) if manager == 'caja' else None
     if legacy_caja is not None and active is None: enabled = True
-    if manager == 'caja' and active is not None: enabled = os.access(path, os.X_OK)
-    missing = '' if manager == 'caja' else optional(manager)
+    if manager in ('caja', 'xfe') and active is not None: enabled = os.access(path, os.X_OK)
+    support = nautilus_support() if manager == 'nautilus' else None
+    if support and active is not None:
+        try: ast.parse(active)
+        except (SyntaxError, ValueError) as error:
+            support = dict(support, ready=False, detail='CFP extension syntax error: ' + str(error))
+        if digest(active) not in (entry.get('hash'), LEGACY_NAUTILUS_HASH, digest(read(RESOURCE / TEMPLATES['nautilus']))):
+            support = dict(support, ready=False, detail='Modified/unrecognized CFP extension; review it manually')
+    missing = ('' if support['ready'] else support['detail'] + '; check distro python3-nautilus, python3-gi and matching Nautilus typelib; then Refresh') if support else ('' if manager == 'caja' else optional(manager))
+    configured = enabled
+    detected = bool(shutil.which('Thunar' if manager == 'thunar' else manager))
+    if support: enabled = enabled and support['ready']
+    else: enabled = enabled and detected and not missing
     if manager == 'nemo' and shutil.which('nemo'):
         try: enabled = enabled and not nemo_disabled()
         except (RuntimeError, OSError, ValueError): missing = 'gsettings / org.nemo.plugins settings schema'
+        configured = enabled
     admin = external = None
     if manager == 'thunar': _, admin, external = thunar_details(contents)
-    return {'needs_update': bool(manager == 'thunar' and enabled and not (admin or external)),
-        'manager': manager, 'version': version(manager), 'detected': bool(shutil.which('Thunar' if manager == 'thunar' else manager)),
+    needs_nautilus = bool(manager == 'nautilus' and active is not None and (active != read(RESOURCE / TEMPLATES['nautilus']) or path.stat().st_mode & 0o7777 != 0o644))
+    return {'configured': configured, 'available': support['ready'] if support else detected and not missing,
+        'needs_update': needs_nautilus or bool(manager == 'thunar' and enabled and not (admin or external)),
+        'manager': manager, 'version': version(manager), 'detected': detected,
         'installed': bool(entry.get('installed') or active is not None or legacy or legacy_caja is not None), 'enabled': enabled,
         'missing': missing, 'reload': bool(entry.get('reload')), 'legacy_system': legacy,
-        'path': str(path), 'method': ('Find + Open as Administrator' if admin else 'Find + independent administrator action' if external else 'Administrator action missing — use Repair actions' if enabled else 'Enabling installs Find + Open as Administrator') if manager == 'thunar' else ('Caja Python extension (switch available)' if legacy_caja is not None and active is None else 'Caja Scripts menu') if manager == 'caja' else '',
+        'path': str(path), 'method': (('Older CFP extension — Repair actions to reconcile Find/admin menus' if needs_nautilus and support['ready'] else support['detail'] + ' · ' + ('Existing compatible administrator extension: ' + support['admin'] if support['admin'] else 'CFP administrator fallback')) if support['ready'] else ('Configured but unavailable' if configured else 'Unavailable')) if support else ('Find + Open as Administrator' if admin else 'Find + independent administrator action' if external else 'Administrator action missing — use Repair actions' if enabled else 'Enabling installs Find + Open as Administrator') if manager == 'thunar' else ('Caja Python extension (switch available)' if legacy_caja is not None and active is None else 'Caja Scripts menu') if manager == 'caja' else 'GTK/libfm Find action; administrator access unverified' if manager == 'pcmanfm' else 'XFE Scripts menu; local filesystem only, no administrator action' if manager == 'xfe' else '',
         'legacy_extension': legacy_caja is not None,
         'managed': digest(active if active is not None else legacy_caja) == entry.get('hash') if active is not None or legacy_caja is not None else False}
 
@@ -305,7 +360,7 @@ def main():
             keys = configparser.ConfigParser(interpolation=None)
             for row in rows:
                 keys[row['manager']] = {k: str(v).lower() if isinstance(v, bool) else str(v)
-                    for k, v in row.items() if k in ('detected', 'installed', 'enabled', 'reload', 'missing', 'version', 'method', 'legacy_extension', 'needs_update')}
+                    for k, v in row.items() if k in ('detected', 'installed', 'enabled', 'reload', 'missing', 'version', 'method', 'legacy_extension', 'needs_update', 'configured', 'available')}
             out = io.StringIO(); keys.write(out, space_around_delimiters=False); print(out.getvalue())
         else: print(json.dumps(rows))
         return
@@ -330,7 +385,7 @@ def main():
         if manager == 'thunar': template = template.strip()
         if active is not None and digest(active) != entry.get('hash'):
             # Adopt only byte-exact pre-existing CFP templates; preserve changes/unrelated files.
-            if active != template: raise RuntimeError('Untracked or modified integration; refusing overwrite/removal: ' + str(path))
+            if active != template and not (manager == 'nautilus' and digest(active) == LEGACY_NAUTILUS_HASH): raise RuntimeError('Untracked or modified integration; refusing overwrite/removal: ' + str(path))
             entry['hash'] = digest(active); entry['installed'] = True
         if manager == 'thunar':
             entry = thunar_update(operation, path, original, entry)
@@ -348,7 +403,7 @@ def main():
                 entry['nemo_last_disabled'] = desired_disabled
                 if global_nemo(data): new = None  # Keep one global menu entry; no duplicate user copy.
             if new is not None:
-                mode = 0o755 if manager in ('dolphin', 'caja') else 0o644
+                mode = 0o755 if manager in ('dolphin', 'caja', 'xfe') else 0o644
                 if active != new or path.stat().st_mode & 0o7777 != mode: atomic(path, new, original, mode)
             elif original is not None:
                 if read(path) != original: raise RuntimeError('Integration changed during removal')

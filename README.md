@@ -28,7 +28,7 @@ Windows 98 style Date search.
 Windows 98 style Advanced search.
 
 
-**Version 1.0.7** — a native Linux file and folder search application, inspired by the classic
+**Version 1.0.9** — a native Linux file and folder search application, inspired by the classic
 Find dialog and styled by your GTK3 desktop theme. Created by MacGyverr / ChatGPT.
 [GitHub project](https://github.com/MacGyverr/classic-find-plus) · GPL-3.0-or-later.
 
@@ -39,14 +39,14 @@ Results support fifteen configurable columns, exact Bytes/Bits, sorting, file ac
 multi-selection, drag-and-drop into Nemo, and CSV or tab-delimited TXT export.
 
 Linux Mint with Nemo is the primary platform. GTK3 runs on other Linux desktops with an X11
-or Wayland session; optional menus support Nemo, GNOME Files (Nautilus), Dolphin, Caja and Thunar. Debian WSL2 is also used for
+or Wayland session; optional menus support Nemo, GNOME Files (Nautilus), Dolphin, Caja, Thunar, GTK PCManFM and XFE. Debian WSL2 is also used for
 development verification. Fedora, Arch and openSUSE native builds are documented but have not
 been tested on those distributions. No Windows-native application is provided.
 
 ## Install a Debian package
 
 Download the DEB for **your distribution and architecture** from the project's Releases page
-when available. Building 1.0.7 does not imply its DEB has been published.
+when available. Building 1.0.9 does not imply its DEB has been published.
 Mint 21.3 uses Ubuntu 22.04 (jammy) libraries; a DEB built on newer Debian may not work there.
 Double-click the downloaded DEB to use your graphical package installer, or run:
 
@@ -176,7 +176,13 @@ Fresh installations enable no file-manager menus. Open **Help/About → File Man
 Refresh, Install the desired adapter, then Enable it. Disable/Remove affects only owned CFP
 entries. Optional packages are reported and never installed silently. Existing Nemo integration
 and saved user choices survive upgrades. Menus pass the selected folder ahead of saved Look in.
-GNOME Files (Nautilus) uses the existing native Python extension, Caja its Scripts menu,
+GNOME Files (Nautilus) uses one native Python extension for Find and administrator access,
+compatible with API 3.0 (before 43) and API 4.x (43+). Enable checks optional Python support;
+configured-but-unavailable status explains missing imports/providers. Repair actions upgrades
+older owned extensions. Restart Nautilus after changes; a passing probe is not a visual menu check.
+Recognized compatible independent administrator extensions are preserved without a duplicate
+CFP admin item. Unknown implementations are preserved; see coexistence limits in the docs.
+Caja uses its Scripts menu,
 Dolphin a service menu. Thunar Enable installs both Find with Classic Find Plus and
 Open as Administrator; older enabled installs offer Repair actions. Disable/Remove
 removes only unchanged CFP actions and retains unrelated custom actions.
@@ -185,13 +191,14 @@ Restart/reload requirements and CLI equivalents are in [integration instructions
 Linux Mint workflow:
 
 Nemo, GNOME Files (Nautilus) and Caja accept CFP drops into administrator-opened
-folders on the owner's tested systems. GNOME Files is Nautilus, using the same adapter.
+folders on the owner's tested systems. GNOME Files is Nautilus, using the same adapter. Its CFP integration supplies both
+Find and Open as Administrator, preserving recognized compatible independent admin extensions.
 Thunar can open `admin:///opt`; CFP now adds its convenient **Open as Administrator**
 action. New Thunar administrative transfers still need real-desktop acceptance.
 
 1. Locate the protected destination directory in the file manager.
-2. Open it as Administrator using its available context-menu action. In Thunar,
-   enable CFP's Thunar integration first, then right-click one selected local folder
+2. Open it as Administrator using its available context-menu action. In GNOME Files or Thunar,
+   enable that manager's CFP integration first, then right-click one selected local folder
    and choose **Open as Administrator**. Where supported, Ctrl+L and `admin:///opt/`
    can open the destination directly; Nemo's F3 split panes are convenient.
 3. Authenticate if requested by GVfs/Polkit.
@@ -206,11 +213,11 @@ A protected ordinary local folder can reject a drop. If `admin://` is unavailabl
 check your distribution's GVfs package documentation (Ubuntu/Mint commonly provides
 it in `gvfs-backends`) and that a desktop authentication agent is running. Install any
 missing distribution package yourself; CFP never installs it automatically. A denied
-or cancelled prompt grants no access. Thunar/GVfs report authentication and location
+or cancelled prompt grants no access. Nautilus/Thunar/GVfs report authentication and location
 errors; the helper reports missing backend/program and launch failures.
 
 GVfs administrative access does not run the whole file manager as root. Keep CFP and
-Thunar running as your regular user. Allow admin search authorizes only CFP's read-only
+GNOME Files and Thunar running as your regular user. Allow admin search authorizes only CFP's read-only
 search worker, not later file operations. Dolphin's ordinary integration is preserved;
 Dolphin-specific administrative access/transfers are outside this change and unverified.
 
@@ -281,7 +288,10 @@ X11 restores normal window position; Wayland leaves placement to the compositor.
 - Missing `gtk/gtk.h` or pkg-config dependency errors: install the development packages, not
   just runtime libraries. Check `pkg-config --modversion gtk+-3.0 glib-2.0`.
 - Missing `pkg-config` or `glib-compile-resources`: install pkg-config/pkgconf and GLib tools.
-- Context menu absent: Refresh integrations in Help/About; check enabled status, optional
+- Context menu absent: Refresh integrations in Help/About; for GNOME Files install
+  matching distro `python3-nautilus`, `python3-gi` and Nautilus typelib if reported missing,
+  use Repair actions for older owned adapters, finish transfers and restart Nautilus (or
+  log out/in). See [Nautilus diagnostics](docs/integrations.md#gnome-files-nautilus). Then check enabled status, optional
   dependencies, PATH and the documented restart requirement.
 - Desktop launcher absent: ensure `PREFIX/share` is in XDG_DATA_DIRS; refresh the session.
 - Permission denied: choose a writable location or an authenticated Nemo destination.
@@ -301,3 +311,17 @@ requires native local/mounted paths with stable directory identities. See docs/s
 No screenshots are bundled in this release; application artwork is included with permission.
 The complete license is [LICENSE](LICENSE); artwork/system-library notices are in
 [THIRD_PARTY.md](THIRD_PARTY.md). See [CHANGELOG.md](CHANGELOG.md) for release history.
+
+## PCManFM (GTK) and XFE integrations
+Enable each separately in Help/About → File Manager Integrations. GTK PCManFM uses
+libfm's supported custom actions (libfm-modules); PCManFM-Qt is a different application
+and is not enabled by this adapter. Find searches one selected local folder; background
+availability depends on the installed libfm menu provider. XFE uses Scripts → Find with
+Classic Find Plus: one folder searches itself, one regular file searches its parent,
+XFE1.45 requires a selection for its Scripts submenu; its empty background has no
+Scripts entry. The launcher accepts no arguments when invoked separately from a folder.
+Restart the manager after changes.
+Other custom actions/scripts remain intact. PCManFM administrator enumeration and
+XFE GVfs administrative support are unverified; CFP supplies neither an administrator
+action nor a claim of privileged transfer support for them. Never start them as root
+for CFP integration. See docs/integrations.md and docs/permissions.md.
