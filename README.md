@@ -28,6 +28,10 @@ Windows 98 style Date search.
 Windows 98 style Advanced search.
 
 
+<img width="863" height="1545" alt="image" src="https://github.com/user-attachments/assets/5c5b7f9b-2e4f-4c8a-9d0c-fc1b2068ca1e" />
+
+Context menu installation.
+
 **Version 1.0.9** — a native Linux file and folder search application, inspired by the classic
 Find dialog and styled by your GTK3 desktop theme. Created by MacGyverr / ChatGPT.
 [GitHub project](https://github.com/MacGyverr/classic-find-plus) · GPL-3.0-or-later.
