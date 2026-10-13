@@ -1,4 +1,4 @@
-Classic Find Plus 1.0.9
+Classic Find Plus 1.0.10
 Created by MacGyverr / ChatGPT. GPL-3.0-or-later; see LICENSE and THIRD_PARTY.md.
 Project: https://github.com/MacGyverr/classic-find-plus
 Administrator search and the explicit root GUI work on the owner's Linux Mint 21.3 desktop.
@@ -157,3 +157,20 @@ Other custom actions/scripts remain intact. PCManFM administrator enumeration an
 XFE GVfs administrative support are unverified; CFP supplies neither an administrator
 action nor a claim of privileged transfer support for them. Never start them as root
 for CFP integration. See docs/integrations.md and docs/permissions.md.
+
+Results filenames: right-click Copy Name to Clipboard copies the stem (final extension
+excluded); Copy Name.EXT to Clipboard copies the full basename. Both use only the clicked
+row, even with several selected, and copy ordinary text. Dotfiles such as .bashrc and
+trailing periods remain intact; archive.tar.gz becomes archive.tar; directories keep their
+whole basename. Unrepresentable filesystem names are refused without lossy conversion.
+
+F2 (one selected result) or right-click Rename… edits the Name cell and changes the real
+filesystem entry. The initial selection excludes its final extension; directories select all.
+Enter commits; Escape or clicking elsewhere cancels. A second single click on the same Name
+cell after GTK's double-click interval and within 500 ms also starts editing. If the desktop
+interval is 500 ms or longer, use F2 or Rename…. Fast double-click continues to open files.
+Rename uses ordinary filesystem permissions, including for administrator search results;
+existing destinations are never overwritten. Wait until searching finishes to rename.
+Renamed rows keep their new paths and sort order, or disappear if filters no longer match.
+Children of renamed directories leave the results; Find Now refreshes them. See
+docs/file-actions.md for safeguards and limits.

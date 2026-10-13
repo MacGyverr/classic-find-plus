@@ -124,3 +124,7 @@ helpers/nautilus-admin-main.c
 scripts/nautilus-support.py
 data/integrations/classic-find-plus-pcmanfm.desktop
 data/integrations/classic-find-plus-xfe.py
+src/result-names.c
+include/result-names.h
+src/result-rename.c
+include/result-rename.h

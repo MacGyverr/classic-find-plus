@@ -10,3 +10,6 @@ void cf_results_sync_drag_begin(GtkTreeView *view, GPtrArray *files);
 void cf_results_sync_drag_end(GtkTreeView *view, GPtrArray *files);
 /* Apply a successful in-app rename against the captured search filters. */
 void cf_results_sync_renamed(GtkTreeView *view, GFile *previous, const CfResult *result);
+
+/* Invalidate paths beneath a renamed entry; no filesystem rescan. */
+void cf_results_sync_invalidate_descendants(GtkTreeView *view, GFile *previous);

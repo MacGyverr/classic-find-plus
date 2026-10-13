@@ -20,8 +20,9 @@ GtkWidget *cf_results_view_new(GtkListStore *store)
     cf_result_columns_attach(GTK_TREE_VIEW(view));
     gtk_tree_view_set_tooltip_column(GTK_TREE_VIEW(view), CF_COL_PATH);
     cf_results_sync_attach(GTK_TREE_VIEW(view));
-    cf_selection_attach(GTK_TREE_VIEW(view));
+    /* Rename observes pointer events before selection delays/captures them for DnD. */
     cf_result_actions_attach(GTK_TREE_VIEW(view));
+    cf_selection_attach(GTK_TREE_VIEW(view));
     return view;
 }
 

@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.10
+
+- Add clicked-row Copy Name to Clipboard and Copy Name.EXT to Clipboard with lossless
+  Unicode/basename handling and stable text snapshots independent of selection.
+- Replace the rename dialog with native inline Name editing through F2, Rename… or a
+  slower second click after GTK’s double-click interval and within 500 ms.
+- Preserve fast double-click Open, multi-selection and external URI drag-and-drop.
+- Pin local parent/source entries, recheck identity and use atomic no-overwrite rename;
+  fail closed on unsupported filesystems. Document the owner-approved source race.
+- Serialize rename against active searches; refresh cached row paths/metadata, preserve
+  sorting and selection, invalidate stale descendants and remove failed refresh paths.
+
 ## 1.0.9
 
 - Add opt-in GTK PCManFM/libfm custom actions and XFE Scripts integration, with safe

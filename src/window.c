@@ -5,6 +5,7 @@
 #include "settings.h"
 #include "results.h"
 #include "results-sync.h"
+#include "result-rename.h"
 #include "export-dialog.h"
 #include "search-form.h"
 #include "search-history.h"
@@ -697,6 +698,7 @@ static gboolean poll(gpointer data)
     if (!stats.finished) return G_SOURCE_CONTINUE;
     cf_search_unref(w->search);
     w->search = NULL;
+    g_object_set_data(G_OBJECT(w->view), "cf-search-active", NULL);
     w->timer = 0;
     search_status(w);
     gtk_widget_set_sensitive(w->tabs, TRUE);
@@ -710,6 +712,9 @@ static void find(GtkButton *button, gpointer data)
     (void)button;
     Window *w = data;
     if (w->search) return;
+    if (g_object_get_data(G_OBJECT(w->view), "cf-rename-busy")) {
+        status(w, "Wait for the rename to finish before searching.", NULL); return;
+    }
     g_autoptr(GDateTime) reference = g_date_time_new_now_local();
     CfCriteriaInput input;
     if (!cf_search_form_effective(w->form, gtk_notebook_get_current_page(GTK_NOTEBOOK(w->tabs)),
@@ -738,6 +743,8 @@ static void find(GtkButton *button, gpointer data)
         status(w, error->message, NULL);
         return;
     }
+    cf_result_rename_cancel(GTK_TREE_VIEW(w->view));
+    g_object_set_data(G_OBJECT(w->view), "cf-search-active", GINT_TO_POINTER(1));
     cf_results_sync_set_search(GTK_TREE_VIEW(w->view), root, g_steal_pointer(&snapshot));
     g_set_object(&w->results_root, root);
     cf_settings_history_record(w->settings, input.name);

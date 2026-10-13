@@ -29,3 +29,5 @@ src/window.c
 src/accounts.c
 src/traversal.c
 src/content-search.c
+src/result-names.c
+src/result-rename.c

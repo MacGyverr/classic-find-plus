@@ -12,7 +12,7 @@ configuration.set_quoted('CF_INTEGRATION_HELPER', get_option('prefix') / get_opt
 configure_file(output: 'config.h', configuration: configuration)
 inc = include_directories('.', 'include')
 search_sources = files('src/content-search.c', 'src/traversal.c', 'src/criteria.c', 'src/date-expression.c', 'src/search.c', 'src/admin-protocol.c', 'src/admin-client.c')
-result_sources = files('src/export-dialog.c', 'src/result-export.c', 'src/metadata.c', 'src/settings.c', 'src/results.c', 'src/results-sync.c', 'src/result-columns.c', 'src/column-preferences.c', 'src/selection.c', 'src/file-operations.c', 'src/result-actions.c')
+result_sources = files('src/export-dialog.c', 'src/result-export.c', 'src/metadata.c', 'src/settings.c', 'src/results.c', 'src/results-sync.c', 'src/result-columns.c', 'src/column-preferences.c', 'src/selection.c', 'src/file-operations.c', 'src/result-actions.c', 'src/result-names.c', 'src/result-rename.c')
 ui_sources = files('src/accounts.c', 'src/integrations.c', 'src/window-position.c', 'src/search-history.c', 'src/window.c', 'src/preferences.c', 'src/search-form.c', 'src/date-input.c', 'src/date-dialog.c', 'src/help-about.c') + result_sources
 artwork_sources = import('gnome').compile_resources('classic-find-plus-resources',
   'data/classic-find-plus.gresource.xml', source_dir: 'data', c_name: 'classic_find_plus')

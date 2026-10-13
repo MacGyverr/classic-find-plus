@@ -5,6 +5,8 @@
 #include "results.h"
 #include "selection.h"
 #include "results-sync.h"
+#include "result-names.h"
+#include "result-rename.h"
 
 #define INFO "standard::name,standard::type,standard::is-symlink,standard::size,standard::content-type,standard::icon,time::created,time::created-usec,time::access,time::access-usec,unix::mode,unix::uid,unix::gid,owner::user,owner::group,time::modified,time::modified-usec,access::can-read,access::can-write,id::file"
 typedef enum { OPEN, OPEN_WITH, FOLDER, COPY, CUT, RENAME, TRASH, PROPERTIES } Action;
@@ -70,6 +72,13 @@ static void dialog_close(GtkDialog *dialog, int response, gpointer unused)
 static void finish(Request *r)
 {
     g_autoptr(GtkTreeView) view = g_weak_ref_get(&r->view);
+    if (view && r->action == RENAME) {
+        g_object_set_data(G_OBJECT(view), "cf-rename-busy", NULL);
+        gtk_widget_set_sensitive(GTK_WIDGET(view), TRUE);
+        GtkWindow *parent = parent_for(GTK_WIDGET(view));
+        if (parent && (!gtk_window_get_focus(parent) || gtk_window_get_focus(parent) == GTK_WIDGET(view)))
+            gtk_widget_grab_focus(GTK_WIDGET(view));
+    }
     if (view && !g_cancellable_is_cancelled(r->cancel) && r->errors->len) {
         if (r->access_hint) g_string_append_printf(r->errors, "\n%s\n", r->access_hint);
         if (r->readonly_hint) g_string_append_printf(r->errors, "\n%s\n", r->readonly_hint);
@@ -102,12 +111,19 @@ static void refreshed(GObject *source, GAsyncResult *result, gpointer data)
     g_autoptr(GtkTreeView) view = g_weak_ref_get(&r->view);
     gboolean current = view && r->generation == cf_results_sync_generation(view) && !g_cancellable_is_cancelled(r->cancel);
     if (current && info) {
-        CfResult row = { G_FILE(source), info };
-        cf_results_sync_renamed(view, g_ptr_array_index(r->files, r->index), &row);
-    } else if (!info) {
-        if (current && (g_error_matches(error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND) ||
-                        g_error_matches(error, G_IO_ERROR, G_IO_ERROR_NOT_DIRECTORY)))
+        const char *expected = g_hash_table_lookup(r->ids, g_ptr_array_index(r->files, r->index));
+        if (g_strcmp0(expected, g_file_info_get_attribute_string(info, G_FILE_ATTRIBUTE_ID_FILE))) {
             cf_results_remove(GTK_LIST_STORE(gtk_tree_view_get_model(view)), g_ptr_array_index(r->files, r->index));
+            g_set_error_literal(&error, G_IO_ERROR, G_IO_ERROR_FAILED,
+                "Rename completed, but the destination changed before it could be refreshed. Search again.");
+            record_error(r, error);
+        } else {
+            CfResult row = { G_FILE(source), info };
+            cf_results_sync_renamed(view, g_ptr_array_index(r->files, r->index), &row);
+        }
+    } else if (!info) {
+        /* The rename succeeded: never retain the old pathname after a refresh error. */
+        if (current) cf_results_remove(GTK_LIST_STORE(gtk_tree_view_get_model(view)), g_ptr_array_index(r->files, r->index));
         record_error(r, error);
     }
     r->index++;
@@ -123,6 +139,7 @@ static void mutated(GObject *source, GAsyncResult *result, gpointer data)
     if (file && current && r->action == TRASH)
         cf_results_remove(GTK_LIST_STORE(gtk_tree_view_get_model(view)), G_FILE(source));
     if (file && current && r->action == RENAME) {
+        if (!g_file_equal(file, G_FILE(source))) cf_results_sync_invalidate_descendants(view, G_FILE(source));
         g_file_query_info_async(file, INFO, G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS,
                                G_PRIORITY_DEFAULT, r->cancel, refreshed, r);
         return;
@@ -233,15 +250,6 @@ static void next(Request *r)
 static void mutation_response(GtkDialog *dialog, int response, gpointer data)
 {
     Request *r = data;
-    if (response == GTK_RESPONSE_OK && r->action == RENAME) {
-        GtkEntry *entry = g_object_get_data(G_OBJECT(dialog), "cf-entry");
-        const char *name = gtk_entry_get_text(entry);
-        if (!cf_file_name_valid(name)) {
-            gtk_widget_error_bell(GTK_WIDGET(entry));
-            return;
-        }
-        r->name = g_strdup(name);
-    }
     g_object_steal_data(G_OBJECT(dialog), "cf-request");
     gtk_widget_destroy(GTK_WIDGET(dialog));
     if (response == GTK_RESPONSE_OK) next(r);
@@ -250,9 +258,15 @@ static void mutation_response(GtkDialog *dialog, int response, gpointer data)
 static void perform(GtkTreeView *view, Action action)
 {
     if (action == COPY || action == CUT) { cf_selection_copy(view, action == CUT); return; }
+    if (action == RENAME) {
+        GList *rows = gtk_tree_selection_get_selected_rows(gtk_tree_view_get_selection(view), NULL);
+        if (rows && !rows->next) cf_result_rename_start(view, rows->data);
+        g_list_free_full(rows, (GDestroyNotify)gtk_tree_path_free);
+        return;
+    }
     Request *r = request_new(view, action);
     if (!r->files->len) { finish(r); return; }
-    if ((action == RENAME || action == OPEN_WITH || action == PROPERTIES) && r->files->len != 1) { finish(r); return; }
+    if ((action == OPEN_WITH || action == PROPERTIES) && r->files->len != 1) { finish(r); return; }
     if (action == FOLDER) {
         GPtrArray *parents = g_ptr_array_new_with_free_func(g_object_unref);
         g_autoptr(GHashTable) seen = g_hash_table_new_full(g_file_hash, (GEqualFunc)g_file_equal, g_object_unref, NULL);
@@ -266,29 +280,13 @@ static void perform(GtkTreeView *view, Action action)
         g_ptr_array_unref(r->files);
         r->files = parents;
     }
-    if (action == RENAME || action == TRASH) {
+    if (action == TRASH) {
         GtkWidget *dialog;
-        if (action == RENAME) {
-            dialog = gtk_dialog_new_with_buttons("Rename", parent_for(GTK_WIDGET(view)),
-                GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT, "_Cancel", GTK_RESPONSE_CANCEL, "_Rename", GTK_RESPONSE_OK, NULL);
-            GtkWidget *entry = gtk_entry_new();
-            gtk_entry_set_max_length(GTK_ENTRY(entry), CF_TEXT_LIMIT);
-            g_autofree char *name = g_file_get_basename(g_ptr_array_index(r->files, 0));
-            g_autofree char *display = g_filename_to_utf8(name, -1, NULL, NULL, NULL);
-            gtk_entry_set_text(GTK_ENTRY(entry), display ? display : "");
-            gtk_entry_set_activates_default(GTK_ENTRY(entry), TRUE);
-            gtk_widget_set_margin_start(entry, 12); gtk_widget_set_margin_end(entry, 12);
-            gtk_widget_set_margin_top(entry, 12); gtk_widget_set_margin_bottom(entry, 12);
-            gtk_box_pack_start(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(dialog))), entry, FALSE, FALSE, 0);
-            g_object_set_data(G_OBJECT(dialog), "cf-entry", entry);
-            gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_OK);
-        } else {
-            dialog = gtk_message_dialog_new(parent_for(GTK_WIDGET(view)), GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
-                GTK_MESSAGE_QUESTION, GTK_BUTTONS_NONE, "Move %u selected item%s to Trash?", r->files->len, r->files->len == 1 ? "" : "s");
-            gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog), "%s", "If Trash is unavailable, the item will be left in place. No permanent deletion is performed.");
-            gtk_dialog_add_buttons(GTK_DIALOG(dialog), "_Cancel", GTK_RESPONSE_CANCEL, "Move to _Trash", GTK_RESPONSE_OK, NULL);
-            gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_CANCEL);
-        }
+        dialog = gtk_message_dialog_new(parent_for(GTK_WIDGET(view)), GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+            GTK_MESSAGE_QUESTION, GTK_BUTTONS_NONE, "Move %u selected item%s to Trash?", r->files->len, r->files->len == 1 ? "" : "s");
+        gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(dialog), "%s", "If Trash is unavailable, the item will be left in place. No permanent deletion is performed.");
+        gtk_dialog_add_buttons(GTK_DIALOG(dialog), "_Cancel", GTK_RESPONSE_CANCEL, "Move to _Trash", GTK_RESPONSE_OK, NULL);
+        gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_CANCEL);
         g_object_set_data_full(G_OBJECT(dialog), "cf-request", r, (GDestroyNotify)request_free);
         g_signal_connect(dialog, "response", G_CALLBACK(mutation_response), r);
         gtk_widget_show_all(dialog);
@@ -314,14 +312,59 @@ static void activate(GtkTreeView *view, GtkTreePath *path, GtkTreeViewColumn *co
 static void menu_activate(GtkMenuItem *item, gpointer data)
 {
     GtkTreeView *view = data;
-    perform(view, GPOINTER_TO_INT(g_object_get_data(G_OBJECT(item), "cf-action")));
+    Action action = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(item), "cf-action"));
+    if (action == RENAME) {
+        GtkTreeRowReference *row = g_object_get_data(G_OBJECT(item), "cf-target-row");
+        g_autoptr(GtkTreePath) path = row ? gtk_tree_row_reference_get_path(row) : NULL;
+        GtkTreeIter iter;
+        GtkTreeModel *model = gtk_tree_view_get_model(view);
+        if (path && gtk_tree_row_reference_get_model(row) == model && gtk_tree_model_get_iter(model, &iter, path)) {
+            g_autoptr(GFile) file = NULL; g_autofree char *id = NULL;
+            gtk_tree_model_get(model, &iter, CF_COL_FILE, &file, CF_COL_ID, &id, -1);
+            GFile *expected = g_object_get_data(G_OBJECT(item), "cf-target-file");
+            const char *identity = g_object_get_data(G_OBJECT(item), "cf-target-id");
+            if (file && expected && g_file_equal(file, expected) && !g_strcmp0(id, identity))
+                cf_result_rename_start(view, path);
+        }
+    } else perform(view, action);
 }
 static void menu_detach(GtkWidget *view, GtkMenu *menu)
 {
     (void)view;
     gtk_widget_destroy(GTK_WIDGET(menu));
 }
-static void popup(GtkTreeView *view, GdkEvent *event)
+static void copy_name(GtkMenuItem *item, gpointer data)
+{
+    const char *text = g_object_get_data(G_OBJECT(item), "cf-name-text");
+    if (!text) return;
+    GtkClipboard *clipboard = gtk_widget_get_clipboard(GTK_WIDGET(data), GDK_SELECTION_CLIPBOARD);
+    gtk_clipboard_set_text(clipboard, text, -1);
+    gtk_clipboard_set_can_store(clipboard, NULL, 0);
+}
+static void name_items(GtkWidget *menu, GtkTreeView *view, GtkTreePath *target)
+{
+    g_autoptr(GFile) file = NULL;
+    g_autofree char *type = NULL;
+    GtkTreeIter iter;
+    GtkTreeModel *model = gtk_tree_view_get_model(view);
+    if (target && gtk_tree_model_get_iter(model, &iter, target))
+        gtk_tree_model_get(model, &iter, CF_COL_FILE, &file, CF_COL_TYPE, &type, -1);
+    g_autoptr(GError) error = NULL;
+    g_autofree char *name = file ? cf_result_name(file, &error) : NULL;
+    gtk_menu_shell_append(GTK_MENU_SHELL(menu), gtk_separator_menu_item_new());
+    const char *labels[] = { "Copy Name to Clipboard", "Copy Name.EXT to Clipboard" };
+    for (guint i = 0; i < G_N_ELEMENTS(labels); i++) {
+        GtkWidget *item = gtk_menu_item_new_with_label(labels[i]);
+        char *text = name ? (i ? g_strdup(name) : g_utf8_substring(name, 0,
+            cf_result_stem_length(name, !g_strcmp0(type, "Folder")))) : NULL;
+        g_object_set_data_full(G_OBJECT(item), "cf-name-text", text, g_free);
+        gtk_widget_set_sensitive(item, text != NULL);
+        if (error) gtk_widget_set_tooltip_text(item, error->message);
+        g_signal_connect(item, "activate", G_CALLBACK(copy_name), view);
+        gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
+    }
+}
+static void popup(GtkTreeView *view, GdkEvent *event, GtkTreePath *target)
 {
     GtkWidget *menu = gtk_menu_new();
     gtk_menu_attach_to_widget(GTK_MENU(menu), GTK_WIDGET(view), menu_detach);
@@ -330,10 +373,26 @@ static void popup(GtkTreeView *view, GdkEvent *event)
     for (guint i = 0; i < G_N_ELEMENTS(names); i++) {
         GtkWidget *item = gtk_menu_item_new_with_mnemonic(names[i]);
         gtk_widget_set_sensitive(item, count > 0 && ((i != OPEN_WITH && i != RENAME && i != PROPERTIES) || count == 1));
+        if (i == RENAME) {
+            GtkTreeModel *model = gtk_tree_view_get_model(view);
+            GtkTreeIter iter;
+            gboolean valid = target && gtk_tree_model_get_iter(model, &iter, target);
+            gtk_widget_set_sensitive(item, valid && !g_object_get_data(G_OBJECT(view), "cf-search-active") &&
+                !g_object_get_data(G_OBJECT(view), "cf-rename-busy"));
+            if (valid) {
+                GFile *file = NULL; char *id = NULL;
+                gtk_tree_model_get(model, &iter, CF_COL_FILE, &file, CF_COL_ID, &id, -1);
+                g_object_set_data_full(G_OBJECT(item), "cf-target-file", file, g_object_unref);
+                g_object_set_data_full(G_OBJECT(item), "cf-target-id", id, g_free);
+                g_object_set_data_full(G_OBJECT(item), "cf-target-row", gtk_tree_row_reference_new(model, target),
+                                       (GDestroyNotify)gtk_tree_row_reference_free);
+            }
+        }
         g_object_set_data(G_OBJECT(item), "cf-action", GINT_TO_POINTER(i));
         g_signal_connect(item, "activate", G_CALLBACK(menu_activate), view);
         gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
     }
+    name_items(menu, view, target);
     g_signal_connect_swapped(menu, "selection-done", G_CALLBACK(gtk_widget_destroy), menu);
     gtk_widget_show_all(menu);
     if (event) gtk_menu_popup_at_pointer(GTK_MENU(menu), event);
@@ -345,21 +404,23 @@ static gboolean button(GtkWidget *widget, GdkEventButton *event, gpointer unused
     if (event->button != 3 || event->type != GDK_BUTTON_PRESS) return FALSE;
     GtkTreeView *view = GTK_TREE_VIEW(widget);
     GtkTreePath *path = NULL;
-    if (!gtk_tree_view_get_path_at_pos(view, event->x, event->y, &path, NULL, NULL, NULL)) return FALSE;
+    gtk_tree_view_get_path_at_pos(view, event->x, event->y, &path, NULL, NULL, NULL);
     GtkTreeSelection *selection = gtk_tree_view_get_selection(view);
-    if (!gtk_tree_selection_path_is_selected(selection, path)) {
+    if (path && !gtk_tree_selection_path_is_selected(selection, path)) {
         gtk_tree_selection_unselect_all(selection);
         gtk_tree_selection_select_path(selection, path);
     }
-    gtk_tree_path_free(path);
     gtk_widget_grab_focus(widget);
-    popup(view, (GdkEvent *)event);
+    popup(view, (GdkEvent *)event, path);
+    if (path) gtk_tree_path_free(path);
     return TRUE;
 }
 static gboolean keyboard_popup(GtkWidget *view, gpointer unused)
 {
     (void)unused;
-    popup(GTK_TREE_VIEW(view), NULL);
+    GList *rows = gtk_tree_selection_get_selected_rows(gtk_tree_view_get_selection(GTK_TREE_VIEW(view)), NULL);
+    popup(GTK_TREE_VIEW(view), NULL, rows && !rows->next ? rows->data : NULL);
+    g_list_free_full(rows, (GDestroyNotify)gtk_tree_path_free);
     return TRUE;
 }
 static gboolean key(GtkWidget *widget, GdkEventKey *event, gpointer unused)
@@ -379,6 +440,18 @@ static gboolean key(GtkWidget *widget, GdkEventKey *event, gpointer unused)
     }
     return FALSE;
 }
+static void rename_commit(GtkTreeView *view, GFile *file, const char *id, const char *name)
+{
+    Request *r = request_new(view, RENAME);
+    g_ptr_array_set_size(r->files, 0);
+    g_hash_table_remove_all(r->ids);
+    g_ptr_array_add(r->files, g_object_ref(file));
+    g_hash_table_insert(r->ids, g_object_ref(file), g_strdup(id));
+    r->name = g_strdup(name);
+    g_object_set_data(G_OBJECT(view), "cf-rename-busy", GINT_TO_POINTER(1));
+    gtk_widget_set_sensitive(GTK_WIDGET(view), FALSE);
+    next(r);
+}
 static void cancel(GtkWidget *view, gpointer data)
 {
     (void)view;
@@ -389,6 +462,7 @@ void cf_result_actions_attach(GtkTreeView *view)
     GCancellable *cancellable = g_cancellable_new();
     g_object_set_data_full(G_OBJECT(view), "cf-actions-cancel", cancellable, g_object_unref);
     g_signal_connect(view, "destroy", G_CALLBACK(cancel), cancellable);
+    cf_result_rename_attach(view, rename_commit);
     g_signal_connect(view, "row-activated", G_CALLBACK(activate), NULL);
     g_signal_connect(view, "button-press-event", G_CALLBACK(button), NULL);
     g_signal_connect(view, "popup-menu", G_CALLBACK(keyboard_popup), NULL);

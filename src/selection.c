@@ -124,6 +124,19 @@ static gboolean press_button(GtkWidget *widget, GdkEventButton *event, gpointer 
 {
     Press *press = data;
     if (press->row) { gtk_tree_row_reference_free(press->row); press->row = NULL; }
+    if (event->button == 1 && event->type == GDK_2BUTTON_PRESS &&
+        !(event->state & gtk_accelerator_get_default_mod_mask())) {
+        GtkTreePath *path = NULL; GtkTreeViewColumn *column = NULL;
+        GtkTreeView *view = GTK_TREE_VIEW(widget);
+        if (gtk_tree_view_get_path_at_pos(view, event->x, event->y, &path, &column, NULL, NULL)) {
+            /* Selected-row presses are captured for multi-file dragging, so GTK may
+             * not see a preceding normal press. Dispatch the classified double-click
+             * explicitly once; never also send it through the default handler. */
+            gtk_tree_view_row_activated(view, path, column);
+            gtk_tree_path_free(path);
+            return TRUE;
+        }
+    }
     if (event->button != 1 || event->type != GDK_BUTTON_PRESS ||
         (event->state & gtk_accelerator_get_default_mod_mask())) return FALSE;
     GtkTreeView *view = GTK_TREE_VIEW(widget);

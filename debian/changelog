@@ -1,3 +1,11 @@
+classic-find-plus (1.0.10-1) unstable; urgency=medium
+
+  * Add clicked-row filename text clipboard commands and native inline rename.
+  * Preserve double-click and DnD; enforce atomic no-overwrite local renames.
+  * Refresh renamed results and invalidate stale directory descendants safely.
+
+ -- MacGyverr / ChatGPT <classic-find@localhost>  Mon, 12 Oct 2026 17:00:00 -0700
+
 classic-find-plus (1.0.9-1) unstable; urgency=medium
 
   * Add opt-in GTK PCManFM custom actions and XFE Scripts support.

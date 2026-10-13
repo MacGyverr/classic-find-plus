@@ -101,6 +101,13 @@ GtkWidget *cf_help_about_new(void)
         "Modified means last modification; Created means filesystem creation/birth; Accessed means last access. "
         "Created searches fall back to Modified only when birth metadata is unavailable, never when a real birth timestamp fails the filter. "
         "The Created result column always shows actual birth metadata, or stays blank. Accessed may not update after every read on relatime/noatime mounts.");
+    paragraph(GTK_BOX(box), "help-result-names", "Right-click a result: Copy Name to Clipboard copies its stem without the final extension; Copy Name.EXT to Clipboard copies its whole basename. "
+        "Both copy plain text from only the clicked row, even with multiple selections. archive.tar.gz becomes archive.tar; .bashrc, file. and directory names stay intact. "
+        "F2 with one selected result or Rename… on a clicked row edits the Name cell and changes the real filesystem item. The stem is selected; directories select all. Enter commits; Escape or clicking elsewhere cancels. "
+        "A second single click on the same Name cell, after GTK's double-click interval and within 500 ms, starts renaming. If the interval is 500 ms or longer, use F2 or Rename…. Fast double-click still opens. "
+        "Rename waits for searching to finish, never overwrites an existing destination and uses your ordinary filesystem permissions, including for administrator search results. "
+        "Unsupported safe rename locations are refused. Pinned identity checks reduce replacement races; a small source-name replacement race remains immediately before the atomic rename. "
+        "Renamed rows update paths/sorting or leave results if filters no longer match. Children of renamed directories leave the results; Find Now refreshes them.");
     paragraph(GTK_BOX(box), "help-input-limits", "Input limits: filename/pattern, Exclude, extension and rename allow up to 8192 characters; "
         "folder paths 32768; date expressions 1024; numeric fields 32. History keeps 20 names. Settings files are limited to 1 MiB. "
         "Linux names can contain spaces, Unicode, quotes, backslashes and brackets. Rename accepts one basename: no /, empty name, ' . ' or '..'. "

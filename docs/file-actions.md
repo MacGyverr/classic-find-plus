@@ -17,20 +17,61 @@ Ctrl+C/Ctrl+X publish a selection snapshot to the GTK clipboard using
 changes no source file until a receiver pastes it. Clipboard ownership survives closing a window
 while the app remains running; persistence after app exit depends on a desktop clipboard manager.
 
-F2 renames a single selection. Rename requires a nonempty UTF-8 filename without slash, `.` or
-`..`, and fails if the destination exists. Delete requests Move to Trash, with a Cancel-default
-confirmation. There is no permanent-delete fallback. Operations query current availability and
-compare the search result's `id::file` where the backend provides it. Replaced files are rejected.
-These are best-effort GIO checks, not an atomic defense against a replacement racing the final
-filesystem call. Symlinks are renamed/trashed themselves, rather than their targets. Mutations
-run in GTask workers, sequentially within each request, and report errors. Closing cancels pending
-work; a mutation already completed remains completed. Errors for a multi-file request do not
-undo successful earlier items. Successful rename refreshes an existing row; Trash removes it.
-Successful renames also revalidate the captured search filters; a nonmatching rename removes the
-result. Recently dragged files have bounded monitoring and asynchronous verification, described in
-[results synchronization](results-sync.md). Other external changes require Find Now to refresh. Permission-denied and
-read-only errors include access guidance; [Phase 5 findings](permissions.md) describe authentication
-prerequisites and the conditional GVfs route.
+Copy Name to Clipboard and Copy Name.EXT to Clipboard copy ordinary desktop CLIPBOARD
+text from the **right-clicked row only**, preserving any existing multi-selection. Each menu
+item owns a filename snapshot, so selection changes, sorting and clearing results cannot
+change it. Empty-space menus disable these commands and Rename…. No file URIs are included.
+The keyboard menu uses a single selected row; multiple selections have no filename target.
+
+Copy Name strips only a nonempty final extension: `Annual.Report.pdf` → `Annual.Report`,
+`archive.tar.gz` → `archive.tar`, `.config.json` → `.config`. `README`, `.bashrc` and `file.`
+remain whole. Directories always keep their whole basename, including periods. Names convert
+losslessly from filesystem encoding to UTF-8 and round-trip; unsupported names are disabled
+with an explanatory tooltip. Clipboard persistence after exit depends on the desktop manager.
+
+F2 with one selected row or **Rename…** on a clicked row opens the native inline Name editor.
+The filename stem is selected using UTF-8 character offsets; directories select the whole name.
+Extensions can be changed deliberately. Enter commits, Escape cancels, and focus loss cancels
+without committing incomplete input. Only one editor/mutation is allowed per view. Rename is
+unavailable during a search; starting a search cancels editing, and an outstanding rename
+must finish before another search starts. The results view briefly becomes unavailable during
+mutation/metadata refresh to prevent actions on the former path.
+
+A second single click on the same selected Name cell starts editing only after the configured
+GTK double-click interval and within 500 ms of the first press. Timing uses the monotonic clock;
+a release idle lets existing selection handling finish. Different rows/columns, modifiers,
+selection changes, drag thresholds, row deletion, model replacement and new searches cancel
+pending gestures. Fast double-click still opens. At GTK intervals of 500 ms or more, no valid
+slow-click interval exists; F2 and Rename… remain available. No desktop setting is changed.
+
+Rename changes the real local filesystem entry using normal GUI permissions. Names must be
+nonempty, valid UTF-8 representable in the filesystem encoding, and contain no slash or NUL;
+the whole basename cannot be `.` or `..`. Spaces, Unicode and other legal Linux punctuation are allowed.
+Same-name rename is a verified no-op. Existing destinations (files, directories or symlinks)
+are never overwritten, even when another process creates them concurrently: Linux
+`renameat2(RENAME_NOREPLACE)` enforces the collision rule atomically. Unsupported locations,
+kernels and filesystems fail safely, without check-then-rename fallback.
+
+The worker checks captured `id::file`, pins parent/source using `O_PATH` descriptors, and
+rechecks device/inode and parent identity immediately before renaming. Symlinks are renamed
+as entries without following their targets. **Residual limitation explicitly accepted by the
+owner:** Linux provides no conditional source-inode rename; another process can still replace
+the source name (or parent path) after the last check. Descriptors reduce this race but cannot
+eliminate it. This limitation does not weaken atomic destination non-overwrite.
+
+On success the cached row gets refreshed name/path/GFile/metadata, preserving selection and
+reapplying sorting; URI clipboard/DnD and export use that new row. Nonmatching renames leave
+the results. Descendant rows and pending sync entries beneath a renamed directory are
+invalidated rather than rebased or rescanned; Find Now repopulates eligible children. If
+metadata refresh fails after success, the old pathname is removed instead of retained.
+Missing/replaced sources, collisions, invalid names, permissions, read-only filesystems and
+unsupported locations report errors. Administrator search never grants rename privileges.
+
+Delete requests Move to Trash with a Cancel-default confirmation and no permanent-delete
+fallback. Trash retains the existing GIO checks and cancellation semantics. Closing cancels
+pending work; completed filesystem mutations remain completed. Multi-file errors do not undo
+earlier successes. Recently dragged files retain bounded asynchronous verification; see
+[results synchronization](results-sync.md). Other external changes require Find Now.
 
 # Drag-and-drop
 

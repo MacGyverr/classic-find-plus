@@ -551,12 +551,34 @@ static void row_published(GtkTreeModel *model, GtkTreePath *path, GtkTreeIter *i
     watch_parent(s, file);
     schedule(s);
 }
+static gboolean descendant(gpointer key, gpointer value, gpointer previous)
+{
+    (void)value;
+    return g_file_has_prefix(G_FILE(key), G_FILE(previous));
+}
+void cf_results_sync_invalidate_descendants(GtkTreeView *view, GFile *previous)
+{
+    Sync *s = g_object_get_data(G_OBJECT(view), KEY);
+    g_hash_table_foreach_remove(s->items, descendant, previous);
+    g_hash_table_foreach_remove(s->folders, descendant, previous);
+    GtkListStore *store = GTK_LIST_STORE(gtk_tree_view_get_model(view));
+    GtkTreeModel *model = GTK_TREE_MODEL(store);
+    GtkTreeIter iter;
+    gboolean valid = gtk_tree_model_get_iter_first(model, &iter);
+    while (valid) {
+        g_autoptr(GFile) file = NULL;
+        gtk_tree_model_get(model, &iter, CF_COL_FILE, &file, -1);
+        if (file && g_file_has_prefix(file, previous)) valid = gtk_list_store_remove(store, &iter);
+        else valid = gtk_tree_model_iter_next(model, &iter);
+    }
+}
 void cf_results_sync_renamed(GtkTreeView *view, GFile *previous, const CfResult *result)
 {
     Sync *s = g_object_get_data(G_OBJECT(view), KEY);
     GtkListStore *store = GTK_LIST_STORE(gtk_tree_view_get_model(view));
-    if (s->closed || !complete_info(s->criteria, result->info)) return;
-    if (s->criteria && !cf_criteria_matches(s->criteria, result->info)) {
+    if (s->closed) return;
+    if (!complete_info(s->criteria, result->info) ||
+        (s->criteria && (!cf_criteria_matches(s->criteria, result->info) || cf_criteria_excludes(s->criteria, result->info)))) {
         cf_results_remove(store, previous);
         return;
     }

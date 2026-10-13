@@ -32,7 +32,7 @@ Windows 98 style Advanced search.
 
 Context menu installation.
 
-**Version 1.0.9** — a native Linux file and folder search application, inspired by the classic
+**Version 1.0.10** — a native Linux file and folder search application, inspired by the classic
 Find dialog and styled by your GTK3 desktop theme. Created by MacGyverr / ChatGPT.
 [GitHub project](https://github.com/MacGyverr/classic-find-plus) · GPL-3.0-or-later.
 
@@ -47,10 +47,27 @@ or Wayland session; optional menus support Nemo, GNOME Files (Nautilus), Dolphin
 development verification. Fedora, Arch and openSUSE native builds are documented but have not
 been tested on those distributions. No Windows-native application is provided.
 
+Results filenames: right-click Copy Name to Clipboard copies the stem (final extension
+excluded); Copy Name.EXT to Clipboard copies the full basename. Both use only the clicked
+row, even with several selected, and copy ordinary text. Dotfiles such as .bashrc and
+trailing periods remain intact; archive.tar.gz becomes archive.tar; directories keep their
+whole basename. Unrepresentable filesystem names are refused without lossy conversion.
+
+F2 (one selected result) or right-click Rename… edits the Name cell and changes the real
+filesystem entry. The initial selection excludes its final extension; directories select all.
+Enter commits; Escape or clicking elsewhere cancels. A second single click on the same Name
+cell after GTK's double-click interval and within 500 ms also starts editing. If the desktop
+interval is 500 ms or longer, use F2 or Rename…. Fast double-click continues to open files.
+Rename uses ordinary filesystem permissions, including for administrator search results;
+existing destinations are never overwritten. Wait until searching finishes to rename.
+Renamed rows keep their new paths and sort order, or disappear if filters no longer match.
+Children of renamed directories leave the results; Find Now refreshes them. See
+[results and file actions](docs/file-actions.md) for safeguards and limits.
+
 ## Install a Debian package
 
 Download the DEB for **your distribution and architecture** from the project's Releases page
-when available. Building 1.0.9 does not imply its DEB has been published.
+when available. Building 1.0.10 does not imply its DEB has been published.
 Mint 21.3 uses Ubuntu 22.04 (jammy) libraries; a DEB built on newer Debian may not work there.
 Double-click the downloaded DEB to use your graphical package installer, or run:
 

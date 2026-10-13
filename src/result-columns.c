@@ -175,6 +175,10 @@ void cf_result_columns_attach(GtkTreeView *view)
             gtk_tree_view_column_add_attribute(column, icon, "gicon", CF_COL_ICON);
         }
         GtkCellRenderer *text = gtk_cell_renderer_text_new();
+        if (i == 0) {
+            g_object_set_data(G_OBJECT(view), "cf-name-renderer", text);
+            g_object_set_data(G_OBJECT(view), "cf-name-column", column);
+        }
         gtk_tree_view_column_pack_start(column, text, TRUE);
         gtk_tree_view_column_add_attribute(column, text, "text", text_ids[i]);
         gtk_tree_view_column_set_resizable(column, TRUE);
