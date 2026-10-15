@@ -17,11 +17,17 @@ Ctrl+C/Ctrl+X publish a selection snapshot to the GTK clipboard using
 changes no source file until a receiver pastes it. Clipboard ownership survives closing a window
 while the app remains running; persistence after app exit depends on a desktop clipboard manager.
 
-Copy Name to Clipboard and Copy Name.EXT to Clipboard copy ordinary desktop CLIPBOARD
-text from the **right-clicked row only**, preserving any existing multi-selection. Each menu
-item owns a filename snapshot, so selection changes, sorting and clearing results cannot
-change it. Empty-space menus disable these commands and Rename…. No file URIs are included.
-The keyboard menu uses a single selected row; multiple selections have no filename target.
+Copy Name to Clipboard, Copy Name.EXT to Clipboard and Copy Full Path to Clipboard use
+ordinary desktop CLIPBOARD text. Right-click within an existing selection to copy **all
+highlighted rows**; right-click outside it to select and copy only the clicked row. Keyboard
+context invocation uses the current selection, including multiple rows. Each menu item owns
+an immutable text snapshot in current displayed model order, respecting sorting/filter
+wrappers. Selection changes, sorting and clearing results cannot change that snapshot.
+Entries have single newline separators, no added trailing separator, bullets, quotes or
+deduplication of matching basenames. Empty-space menus disable all three commands and Rename….
+Copy Full Path uses the actual native filesystem path, without file:// or URI escaping;
+literal %20 stays %20. Non-native Full Path copying is disabled with an explanation.
+Existing Ctrl+C/Ctrl+X file payloads and drag-and-drop continue using URIs.
 
 Copy Name strips only a nonempty final extension: `Annual.Report.pdf` → `Annual.Report`,
 `archive.tar.gz` → `archive.tar`, `.config.json` → `.config`. `README`, `.bashrc` and `file.`
@@ -31,8 +37,13 @@ with an explanatory tooltip. Clipboard persistence after exit depends on the des
 
 F2 with one selected row or **Rename…** on a clicked row opens the native inline Name editor.
 The filename stem is selected using UTF-8 character offsets; directories select the whole name.
-Extensions can be changed deliberately. Enter commits, Escape cancels, and focus loss cancels
-without committing incomplete input. Only one editor/mutation is allowed per view. Rename is
+Extensions can be changed deliberately. Opening the editor uses cached result data only:
+no filesystem query, permission check or rename, even for protected/inaccessible files.
+The native entry supports selecting/copying part of a name with Ctrl+C; normal text shortcuts
+stay in the entry. Enter with unchanged byte-equal text closes without any filesystem task.
+Only changed text requests validation/rename. Missing cached identity blocks a changed commit,
+not text editing. Escape and focus loss cancel without committing incomplete input. Errors
+close the editor, keep the real source/model unchanged and preserve selection where possible. Only one editor/mutation is allowed per view. Rename is
 unavailable during a search; starting a search cancels editing, and an outstanding rename
 must finish before another search starts. The results view briefly becomes unavailable during
 mutation/metadata refresh to prevent actions on the former path.
@@ -47,7 +58,7 @@ slow-click interval exists; F2 and Rename… remain available. No desktop settin
 Rename changes the real local filesystem entry using normal GUI permissions. Names must be
 nonempty, valid UTF-8 representable in the filesystem encoding, and contain no slash or NUL;
 the whole basename cannot be `.` or `..`. Spaces, Unicode and other legal Linux punctuation are allowed.
-Same-name rename is a verified no-op. Existing destinations (files, directories or symlinks)
+Unchanged editor acceptance performs no filesystem operation or permission check. Existing destinations (files, directories or symlinks)
 are never overwritten, even when another process creates them concurrently: Linux
 `renameat2(RENAME_NOREPLACE)` enforces the collision rule atomically. Unsupported locations,
 kernels and filesystems fail safely, without check-then-rename fallback.

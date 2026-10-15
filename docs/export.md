@@ -1,4 +1,4 @@
-# Exporting Results (1.0.1)
+# Exporting Results
 
 The Export results button sits below Find/Stop. It is enabled only when the displayed model
 contains rows, including stopped partial searches, and disabled while writing. First insertion,
@@ -11,6 +11,14 @@ all fifteen columns. No new metadata lookup, search, independent sorting or sele
 change occurs. Search and synchronization continue; their subsequent changes cannot alter
 the export. One chooser per window retains one immutable click-time snapshot for retries.
 
+Full Path and In Folder values derive directly from each row's GFile, rather than display
+strings or URI decoding. Native locations use g_file_get_path with lossless filesystem-to-
+UTF-8 conversion: spaces, Unicode, #, percent signs and literal %20 remain actual characters.
+CSV and TXT share this conversion; there is no `%20` replacement. Non-native locations keep
+URIs. Native paths with bytes unrepresentable as UTF-8 also retain a lossless URI fallback
+instead of silently changing their identity. Clipboard Full Path refuses that unrepresentable
+case. Export performs no extra metadata lookup and does not change URI drag-and-drop.
+
 CSV is the default: UTF-8, commas, every field and header quoted, embedded quotes doubled,
 CRLF record endings. Embedded newlines remain within quotes. TXT uses literal tabs, no
 added quotes or quote doubling, headers and CRLF. Each embedded TAB, CR and LF becomes
@@ -20,7 +28,7 @@ Both formats prefix one ASCII apostrophe to any field beginning with TAB, CR or 
 whose first character after Unicode whitespace, control characters and BOM is =, +, - or @.
 This includes headings. This deterministic spreadsheet safeguard may appear as a literal
 apostrophe in text readers. Ordinary non-formula fields keep their spaces and punctuation.
-Invalid UTF-8 becomes U+FFFD in the snapshot. Stored values and original files are untouched.
+Invalid UTF-8 in other display-only fields becomes U+FFFD in the snapshot. Stored values and original files are untouched.
 
 The native GTK Save chooser starts in the captured root of the last successful search,
 independent of later Look in edits. Non-writable roots stay selected; inaccessible/missing

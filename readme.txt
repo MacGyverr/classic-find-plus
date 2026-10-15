@@ -1,4 +1,4 @@
-Classic Find Plus 1.0.10
+Classic Find Plus 1.0.11
 Created by MacGyverr / ChatGPT. GPL-3.0-or-later; see LICENSE and THIRD_PARTY.md.
 Project: https://github.com/MacGyverr/classic-find-plus
 Administrator search and the explicit root GUI work on the owner's Linux Mint 21.3 desktop.
@@ -158,15 +158,25 @@ XFE GVfs administrative support are unverified; CFP supplies neither an administ
 action nor a claim of privileged transfer support for them. Never start them as root
 for CFP integration. See docs/integrations.md and docs/permissions.md.
 
-Results filenames: right-click Copy Name to Clipboard copies the stem (final extension
-excluded); Copy Name.EXT to Clipboard copies the full basename. Both use only the clicked
-row, even with several selected, and copy ordinary text. Dotfiles such as .bashrc and
-trailing periods remain intact; archive.tar.gz becomes archive.tar; directories keep their
-whole basename. Unrepresentable filesystem names are refused without lossy conversion.
+Results clipboard commands: Copy Name to Clipboard copies the stem (final extension
+excluded), Copy Name.EXT to Clipboard copies the full basename, and Copy Full Path to
+Clipboard copies the native filesystem path. Right-click a selected row to copy all
+highlighted results; right-click an unselected row to select and copy only that item.
+The keyboard menu uses the current selection. Entries use single newline separators in
+current displayed sort order, without an added trailing newline or duplicate-name removal.
+These commands copy ordinary text, independently of file URI clipboard and drag-and-drop.
+Dotfiles such as .bashrc and trailing periods stay intact; archive.tar.gz becomes archive.tar;
+directories keep their whole basename. Unrepresentable filesystem names are refused without
+lossy conversion. Empty-space menus disable the three text commands.
+CSV/TXT Full Path and In Folder derive native local paths from GFile, preserving spaces,
+literal %20, percent signs, hash and Unicode. Remote results retain URIs. CSV quoting and
+TXT tab-delimited formatting are unchanged.
 
 F2 (one selected result) or right-click Rename… edits the Name cell and changes the real
 filesystem entry. The initial selection excludes its final extension; directories select all.
-Enter commits; Escape or clicking elsewhere cancels. A second single click on the same Name
+Editing opens without filesystem permission checks, so protected filenames can be selected
+and copied with Ctrl+C. Enter requests a rename only if the text changed; unchanged Enter
+closes without a filesystem operation. Escape or clicking elsewhere cancels. A second single click on the same Name
 cell after GTK's double-click interval and within 500 ms also starts editing. If the desktop
 interval is 500 ms or longer, use F2 or Rename…. Fast double-click continues to open files.
 Rename uses ordinary filesystem permissions, including for administrator search results;

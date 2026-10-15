@@ -1,5 +1,7 @@
 #include "result-export.h"
 #include "result-columns.h"
+#include "results.h"
+#include "result-names.h"
 
 struct _CfExportSnapshot {
     gint refs;
@@ -47,7 +49,19 @@ CfExportSnapshot *cf_export_snapshot_new(GtkTreeView *view)
         GPtrArray *row = g_ptr_array_new_with_free_func(g_free);
         for (guint i = 0; i < ids->len; i++) {
             char *value = NULL;
-            gtk_tree_model_get(model, &iter, g_array_index(ids, int, i), &value, -1);
+            int id = g_array_index(ids, int, i);
+            if (id == CF_COL_PATH || id == CF_COL_FOLDER) {
+                g_autoptr(GFile) file = NULL, parent = NULL;
+                gtk_tree_model_get(model, &iter, CF_COL_FILE, &file, -1);
+                if (file && id == CF_COL_FOLDER) parent = g_file_get_parent(file);
+                GFile *location = id == CF_COL_FOLDER ? parent : file;
+                if (location) {
+                    value = cf_result_path(location, NULL);
+                    if (!value) value = g_file_get_uri(location); /* Lossless URI for unrepresentable bytes. */
+                } else if (file) value = g_strdup("");
+            }
+            /* Display-only synthetic rows retain the established cached string fallback. */
+            if (!value) gtk_tree_model_get(model, &iter, id, &value, -1);
             if (!value) value = g_strdup("");
             else if (!g_utf8_validate(value, -1, NULL)) {
                 char *fixed = g_utf8_make_valid(value, -1);

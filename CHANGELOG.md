@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.11
+
+- Copy all highlighted names in displayed order when right-clicking a selection;
+  right-clicking an unselected row copies that row only. Support keyboard selection.
+- Add plain-text Copy Full Path with lossless native paths and stable multiline snapshots.
+- Export native Full Path/In Folder values from GFile in CSV/TXT, preserving literal
+  percent sequences, spaces, quoting, visible column order and remote URI fallback.
+- Permit protected-file text editing without permission queries or cached identity gates.
+  Unchanged Enter performs no filesystem task; only changed names validate/rename.
+- Preserve normal text shortcuts, rename error cleanup, gestures, atomic collision safety,
+  source identity checks, result consistency, URI drag-and-drop and file-manager adapters.
+
 ## 1.0.10
 
 - Add clicked-row Copy Name to Clipboard and Copy Name.EXT to Clipboard with lossless

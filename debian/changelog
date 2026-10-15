@@ -1,3 +1,11 @@
+classic-find-plus (1.0.11-1) unstable; urgency=medium
+
+  * Copy selected filename text in display order and add native full-path clipboard.
+  * Export native GFile paths in CSV/TXT without URI display encoding.
+  * Defer rename validation to changed commits; unchanged editing is a true no-op.
+
+ -- MacGyverr / ChatGPT <classic-find@localhost>  Wed, 14 Oct 2026 12:00:00 -0700
+
 classic-find-plus (1.0.10-1) unstable; urgency=medium
 
   * Add clicked-row filename text clipboard commands and native inline rename.

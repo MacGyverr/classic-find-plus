@@ -101,6 +101,9 @@ static void edited(GtkCellRendererText *renderer, const char *path, const char *
 {
     (void)renderer; (void)path;
     Rename *r = data;
+    /* Opening/copying/cancelling an editor and accepting unchanged text never dispatch
+     * a filesystem task, even when the original entry is inaccessible or missing. */
+    if (!r->accept || !r->name || !strcmp(name, r->name)) { editor_clear(r); return; }
     GtkTreeIter iter;
     g_autoptr(GtkTreePath) current = r->row ? gtk_tree_row_reference_get_path(r->row) : NULL;
     gboolean valid = r->accept && current && !r->closed &&
@@ -113,6 +116,10 @@ static void edited(GtkCellRendererText *renderer, const char *path, const char *
     if (valid) {
         gtk_tree_model_get(r->model, &iter, CF_COL_FILE, &file, CF_COL_ID, &id, -1);
         valid = file && g_file_equal(file, r->file) && !g_strcmp0(id, r->id);
+    }
+    if (valid && !id) {
+        explain(r, "A stable file identity is unavailable. Search again before changing this item.");
+        editor_clear(r); return;
     }
     if (valid && cf_file_name_valid(name)) {
         /* Own strings across editor teardown and potential synchronous signals. */
@@ -138,7 +145,7 @@ void cf_result_rename_start(GtkTreeView *view, GtkTreePath *path)
     gtk_tree_model_get(model, &iter, CF_COL_FILE, &r->file, CF_COL_ID, &r->id, CF_COL_TYPE, &type, -1);
     g_autoptr(GError) error = NULL;
     r->name = r->file ? cf_result_name(r->file, &error) : NULL;
-    if (!r->name || !r->id) {
+    if (!r->name) {
         explain(r, error ? error->message : "A stable file identity is unavailable. Search again before renaming this item.");
         editor_clear(r); return;
     }

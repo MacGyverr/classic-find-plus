@@ -341,28 +341,51 @@ static void copy_name(GtkMenuItem *item, gpointer data)
     gtk_clipboard_set_text(clipboard, text, -1);
     gtk_clipboard_set_can_store(clipboard, NULL, 0);
 }
-static void name_items(GtkWidget *menu, GtkTreeView *view, GtkTreePath *target)
+static char *selected_text(GtkTreeView *view, GList *rows, guint mode, GError **error)
 {
-    g_autoptr(GFile) file = NULL;
-    g_autofree char *type = NULL;
-    GtkTreeIter iter;
+    g_autoptr(GString) text = g_string_new(NULL);
     GtkTreeModel *model = gtk_tree_view_get_model(view);
-    if (target && gtk_tree_model_get_iter(model, &iter, target))
-        gtk_tree_model_get(model, &iter, CF_COL_FILE, &file, CF_COL_TYPE, &type, -1);
-    g_autoptr(GError) error = NULL;
-    g_autofree char *name = file ? cf_result_name(file, &error) : NULL;
+    for (GList *p = rows; p; p = p->next) {
+        GtkTreeIter iter;
+        g_autoptr(GFile) file = NULL;
+        g_autofree char *type = NULL, *value = NULL;
+        if (gtk_tree_model_get_iter(model, &iter, p->data))
+            gtk_tree_model_get(model, &iter, CF_COL_FILE, &file, CF_COL_TYPE, &type, -1);
+        if (!file) {
+            g_set_error_literal(error, G_IO_ERROR, G_IO_ERROR_NOT_FOUND, "A selected result is no longer available.");
+            return NULL;
+        }
+        if (mode == 2 && !g_file_is_native(file)) {
+            g_set_error_literal(error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED, "A selected result has no native filesystem path.");
+            return NULL;
+        }
+        value = mode == 2 ? cf_result_path(file, error) : cf_result_name(file, error);
+        if (!value) return NULL; /* Never copy a partial or lossy selection. */
+        if (mode == 0) value[g_utf8_offset_to_pointer(value,
+            cf_result_stem_length(value, !g_strcmp0(type, "Folder"))) - value] = 0;
+        if (p != rows) g_string_append_c(text, '\n');
+        g_string_append(text, value);
+    }
+    return rows ? g_string_free(g_steal_pointer(&text), FALSE) : NULL;
+}
+static void name_items(GtkWidget *menu, GtkTreeView *view, gboolean has_target)
+{
+    /* GTK returns selected paths in current model/display order, including wrappers.
+     * Own the text at menu invocation, independent of later selection/model changes. */
+    GList *rows = has_target ? gtk_tree_selection_get_selected_rows(gtk_tree_view_get_selection(view), NULL) : NULL;
     gtk_menu_shell_append(GTK_MENU_SHELL(menu), gtk_separator_menu_item_new());
-    const char *labels[] = { "Copy Name to Clipboard", "Copy Name.EXT to Clipboard" };
+    const char *labels[] = { "Copy Name to Clipboard", "Copy Name.EXT to Clipboard", "Copy Full Path to Clipboard" };
     for (guint i = 0; i < G_N_ELEMENTS(labels); i++) {
         GtkWidget *item = gtk_menu_item_new_with_label(labels[i]);
-        char *text = name ? (i ? g_strdup(name) : g_utf8_substring(name, 0,
-            cf_result_stem_length(name, !g_strcmp0(type, "Folder")))) : NULL;
+        g_autoptr(GError) error = NULL;
+        char *text = selected_text(view, rows, i, &error);
         g_object_set_data_full(G_OBJECT(item), "cf-name-text", text, g_free);
         gtk_widget_set_sensitive(item, text != NULL);
         if (error) gtk_widget_set_tooltip_text(item, error->message);
         g_signal_connect(item, "activate", G_CALLBACK(copy_name), view);
         gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
     }
+    g_list_free_full(rows, (GDestroyNotify)gtk_tree_path_free);
 }
 static void popup(GtkTreeView *view, GdkEvent *event, GtkTreePath *target)
 {
@@ -392,7 +415,7 @@ static void popup(GtkTreeView *view, GdkEvent *event, GtkTreePath *target)
         g_signal_connect(item, "activate", G_CALLBACK(menu_activate), view);
         gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
     }
-    name_items(menu, view, target);
+    name_items(menu, view, target != NULL || event == NULL);
     g_signal_connect_swapped(menu, "selection-done", G_CALLBACK(gtk_widget_destroy), menu);
     gtk_widget_show_all(menu);
     if (event) gtk_menu_popup_at_pointer(GTK_MENU(menu), event);

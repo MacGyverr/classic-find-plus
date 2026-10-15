@@ -5,6 +5,7 @@
 #include "result-actions.h"
 #include "result-columns.h"
 #include "results-sync.h"
+#include "result-names.h"
 
 GtkListStore *cf_results_new(void)
 {
@@ -69,8 +70,10 @@ static void set_result(GtkListStore *store, GtkTreeIter *iter, const CfResult *r
 {
     GFileInfo *info = result->info;
     g_autoptr(GFile) parent = g_file_get_parent(result->file);
-    g_autofree char *folder = parent ? g_file_get_parse_name(parent) : g_strdup("");
-    g_autofree char *path = g_file_get_parse_name(result->file);
+    g_autofree char *folder = parent ? cf_result_path(parent, NULL) : g_strdup("");
+    if (!folder) folder = g_file_get_uri(parent);
+    g_autofree char *path = cf_result_path(result->file, NULL);
+    if (!path) path = g_file_get_uri(result->file);
     g_autofree char *name = g_filename_display_name(g_file_info_get_name(info));
     goffset signed_size = g_file_info_get_size(info);
     guint64 size = g_file_info_get_attribute_uint64(info, G_FILE_ATTRIBUTE_STANDARD_SIZE);
