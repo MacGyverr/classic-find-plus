@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.0.12
+
+- Add opt-in PCManFM-Qt Find and Open as Administrator through one integration control.
+- Share Find safely with GTK PCManFM; retain it while either adapter is enabled and
+  preserve unrelated/modified actions during upgrades, removal and write failures.
+- Use quoted native-path substitution in both variants, fixing libfm-qt apostrophe
+  URI launch failures. Administrative access uses normal-user Qt/GVfs/Polkit.
+- Document shared visibility, restart/dependency requirements and live-test limits.
+
 ## 1.0.11
 
 - Copy all highlighted names in displayed order when right-clicking a selection;

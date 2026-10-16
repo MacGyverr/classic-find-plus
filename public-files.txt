@@ -128,3 +128,5 @@ src/result-names.c
 include/result-names.h
 src/result-rename.c
 include/result-rename.h
+helpers/pcmanfm-qt-admin-main.c
+data/integrations/classic-find-plus-pcmanfm-qt-admin.desktop

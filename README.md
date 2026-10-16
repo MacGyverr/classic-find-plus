@@ -32,7 +32,7 @@ Windows 98 style Advanced search.
 
 Context menu installation.
 
-**Version 1.0.11** — a native Linux file and folder search application, inspired by the classic
+**Version 1.0.12** — a native Linux file and folder search application, inspired by the classic
 Find dialog and styled by your GTK3 desktop theme. Created by MacGyverr / ChatGPT.
 [GitHub project](https://github.com/MacGyverr/classic-find-plus) · GPL-3.0-or-later.
 
@@ -43,7 +43,7 @@ Results support fifteen configurable columns, exact Bytes/Bits, sorting, file ac
 multi-selection, drag-and-drop into Nemo, and CSV or tab-delimited TXT export.
 
 Linux Mint with Nemo is the primary platform. GTK3 runs on other Linux desktops with an X11
-or Wayland session; optional menus support Nemo, GNOME Files (Nautilus), Dolphin, Caja, Thunar, GTK PCManFM and XFE. Debian WSL2 is also used for
+or Wayland session; optional menus support Nemo, GNOME Files (Nautilus), Dolphin, Caja, Thunar, GTK PCManFM, PCManFM-Qt and XFE. Debian WSL2 is also used for
 development verification. Fedora, Arch and openSUSE native builds are documented but have not
 been tested on those distributions. No Windows-native application is provided.
 
@@ -77,7 +77,7 @@ Children of renamed directories leave the results; Find Now refreshes them. See
 ## Install a Debian package
 
 Download the DEB for **your distribution and architecture** from the project's Releases page
-when available. Building 1.0.11 does not imply its DEB has been published.
+when available. Building 1.0.12 does not imply its DEB has been published.
 Mint 21.3 uses Ubuntu 22.04 (jammy) libraries; a DEB built on newer Debian may not work there.
 Double-click the downloaded DEB to use your graphical package installer, or run:
 
@@ -345,8 +345,7 @@ The complete license is [LICENSE](LICENSE); artwork/system-library notices are i
 
 ## PCManFM (GTK) and XFE integrations
 Enable each separately in Help/About → File Manager Integrations. GTK PCManFM uses
-libfm's supported custom actions (libfm-modules); PCManFM-Qt is a different application
-and is not enabled by this adapter. Find searches one selected local folder; background
+libfm's supported custom actions (libfm-modules); PCManFM-Qt has its own integration row. Find searches one selected local folder; background
 availability depends on the installed libfm menu provider. XFE uses Scripts → Find with
 Classic Find Plus: one folder searches itself, one regular file searches its parent,
 XFE1.45 requires a selection for its Scripts submenu; its empty background has no
@@ -356,3 +355,26 @@ Other custom actions/scripts remain intact. PCManFM administrator enumeration an
 XFE GVfs administrative support are unverified; CFP supplies neither an administrator
 action nor a claim of privileged transfer support for them. Never start them as root
 for CFP integration. See docs/integrations.md and docs/permissions.md.
+
+PCManFM-Qt integration
+---------------------
+PCManFM-Qt is the Qt file manager commonly used with LXQt, separate from GTK PCManFM.
+Enable its row in Help/About → File Manager Integrations to install Find with Classic
+Find Plus and Open as Administrator together. Install alone leaves both inactive.
+Restart the manager after action changes. Find opens CFP at the selected local directory,
+overriding saved Look in, without automatically searching.
+
+Both PCManFM variants read ~/.local/share/file-manager/actions (or XDG_DATA_HOME).
+CFP shares one Find action and retains it while either integration is enabled; the status
+explains shared owners even when one row is disabled. Qt's administrator action can also
+appear in GTK PCManFM and always opens PCManFM-Qt. Disable Qt removes that action while
+retaining Find for an enabled GTK adapter. Unrelated or modified actions are preserved.
+
+Administrator access uses admin:/// URIs through GVfs/Polkit as your normal desktop user;
+it does not start a root file manager. Install the distribution's GVfs admin backend
+(Ubuntu/Mint: gvfs-backends) and use an active desktop authentication agent. CFP installs
+no dependencies and captures no credentials. Qt/GVfs report denied/cancelled authentication
+and location errors. Native Qt1.4.1 selected-folder Find and administrator authorization
+prompt were verified; authenticated browsing/transfers remain unverified. Background
+menu presence was verified, but its action launch needs desktop acceptance.
+See docs/integrations.md and docs/permissions.md.

@@ -1,8 +1,8 @@
 #include "integrations.h"
 #include "config.h"
 
-static const char *managers[] = { "nemo", "nautilus", "dolphin", "caja", "thunar", "pcmanfm", "xfe" };
-static const char *manager_names[] = { "Nemo", "GNOME Files (Nautilus)", "Dolphin", "Caja", "Thunar", "PCManFM (GTK)", "XFE" };
+static const char *managers[] = { "nemo", "nautilus", "dolphin", "caja", "thunar", "pcmanfm", "xfe", "pcmanfm-qt" };
+static const char *manager_names[] = { "Nemo", "GNOME Files (Nautilus)", "Dolphin", "Caja", "Thunar", "PCManFM (GTK)", "XFE", "PCManFM-Qt" };
 typedef struct {
     GtkWidget *box, *message, *labels[G_N_ELEMENTS(managers)], *install[G_N_ELEMENTS(managers)], *enable[G_N_ELEMENTS(managers)], *remove[G_N_ELEMENTS(managers)];
     gboolean enabled[G_N_ELEMENTS(managers)], closed;
@@ -66,7 +66,7 @@ static void finished(GObject *object, GAsyncResult *result, gpointer data)
             }
             gboolean switch_caja = !g_strcmp0(name, "caja") &&
                 g_key_file_get_boolean(keys, name, "legacy_extension", NULL);
-            gboolean repair_actions = (!g_strcmp0(name, "thunar") || !g_strcmp0(name, "nautilus")) &&
+            gboolean repair_actions = (!g_strcmp0(name, "thunar") || !g_strcmp0(name, "nautilus") || !g_strcmp0(name, "pcmanfm-qt") || !g_strcmp0(name, "pcmanfm")) &&
                 g_key_file_get_boolean(keys, name, "needs_update", NULL);
             gtk_widget_set_sensitive(s->install[i], !installed || switch_caja || repair_actions);
             gtk_button_set_label(GTK_BUTTON(s->install[i]), switch_caja ? "Switch to Scripts" : repair_actions ? "Repair actions" : "Install");

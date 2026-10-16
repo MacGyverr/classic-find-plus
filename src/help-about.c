@@ -126,10 +126,10 @@ GtkWidget *cf_help_about_new(void)
         "sudo classic-find-plus --allow-root explicitly runs the whole GUI as root with an Administrator Mode title and startup warning. "
         "Every feature has root permissions and can change system files. Root uses separate configuration/cache/data under its own home. "
         "X11/Wayland access may be refused; CFP never changes display access controls. Prefer Allow admin search when only searching needs elevation.");
-    paragraph(GTK_BOX(box), "help-additional-managers", "Enable PCManFM (GTK) and XFE separately in File Manager Integrations. "
-        "GTK PCManFM uses libfm custom actions for one local folder; install your distribution's libfm-modules if missing. PCManFM-Qt is a different application. "
+    paragraph(GTK_BOX(box), "help-additional-managers", "Enable PCManFM (GTK), PCManFM-Qt and XFE separately in File Manager Integrations. "
+        "GTK PCManFM uses libfm custom actions for one local folder; install your distribution's libfm-modules if missing. PCManFM-Qt is the separate Qt/LXQt file manager. Its single control enables Find and Open as Administrator together. "
         "XFE uses Scripts > Find with Classic Find Plus: select one folder to search it, one regular file to search its parent, XFE1.45 requires a selection to show Scripts. "
-        "Restart the manager after changes. PCManFM and XFE administrator access/transfers are unverified; CFP supplies no administrator action for them.");
+        "GTK and Qt share one Find action; it remains while either integration is enabled. Qt owns the administrator action, which can also appear in GTK but always opens normal-user PCManFM-Qt via GVfs. Restart affected managers after changes. Qt requires a GVfs admin backend and desktop Polkit agent. Its administrator authorization prompt was verified; authenticated browsing/transfers and background launching remain unverified. GTK-specific admin access and XFE admin transfers remain unverified.");
     paragraph(GTK_BOX(box), "help-nautilus", "GNOME Files is Nautilus. Enable its single entry in File Manager Integrations for Find with Classic Find Plus and Open as Administrator. "
         "One extension supports API 3.0 (before 43) and API 4.x (43+) without GTK3 imports into GTK4. Selected local folders and folder backgrounds are supported; Find opens without searching. "
         "Recognized compatible independent administrator extensions are preserved and suppress CFP's fallback. Unknown extensions remain untouched; detection cannot prove their loading. "
@@ -138,7 +138,7 @@ GtkWidget *cf_help_about_new(void)
         "Repair actions upgrades unchanged older CFP extensions; Disable/Remove preserves unrelated providers. Finish transfers and restart Nautilus or log out/in to reload. "
         "A passing support probe is not visual menu verification. See docs/integrations.md for diagnostics and coexistence limits.");
     paragraph(GTK_BOX(box), "help-admin-transfers", "Administrative transfers — Linux Mint workflow:\n"
-        "CFP supports Nemo, GNOME Files (Nautilus), Caja, Thunar, Dolphin, GTK PCManFM and XFE. GNOME Files is Nautilus, using the same adapter. "
+        "CFP supports Nemo, GNOME Files (Nautilus), Caja, Thunar, Dolphin, GTK PCManFM, PCManFM-Qt and XFE. GNOME Files is Nautilus, using the same adapter. "
         "Nemo, GNOME Files and Caja administrative destinations accept CFP drops on the owner's tested systems.\n"
         "Thunar Enable installs Find with Classic Find Plus and Open as Administrator together; older enabled installs offer Repair actions. "
         "Disable/Remove deletes only unchanged CFP actions, preserving unrelated administrator actions. "
@@ -152,7 +152,7 @@ GtkWidget *cf_help_about_new(void)
         "CFP remains a normal-user application; ordinary drag-and-drop is unchanged. GVfs administrative access does not run the entire file manager as root. "
         "Support depends on the distribution, manager, GVfs admin backend and desktop authentication agent. "
         "If unavailable, consult distribution GVfs packages (Ubuntu/Mint commonly gvfs-backends) and authentication-agent setup; install missing packages yourself. "
-        "CFP installs no dependencies and captures no credentials. Nautilus/Thunar/GVfs handle denied/cancelled prompts and location errors. "
+        "CFP installs no dependencies and captures no credentials. Nautilus/Thunar/PCManFM-Qt/GVfs handle denied/cancelled prompts and location errors. "
         "Dolphin administrative actions/transfers are outside this change and unverified. See docs/integrations.md and docs/permissions.md.");
     paragraph(GTK_BOX(box), "help-settings", "Filename arrows show the newest 20 unique searches. Choosing fills the fields without searching; Clear History retains the current input. "
         "Search values, relative expressions, last tab, window and column layout are saved in ~/.config/classic-find-plus/settings.ini (or XDG_CONFIG_HOME). "

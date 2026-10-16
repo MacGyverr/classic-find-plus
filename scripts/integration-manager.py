@@ -16,10 +16,10 @@ import sys
 import tempfile
 from xml.parsers import expat
 
-MANAGERS = ('nemo', 'nautilus', 'dolphin', 'caja', 'thunar', 'pcmanfm', 'xfe')
+MANAGERS = ('nemo', 'nautilus', 'dolphin', 'caja', 'thunar', 'pcmanfm', 'xfe', 'pcmanfm-qt')
 TEMPLATES = dict(zip(MANAGERS, ('classic-find-plus.nemo_action', 'classic-find-plus-nautilus.py',
     'classic-find-plus.desktop', 'classic-find-plus-caja.py', 'classic-find-plus-thunar.xml',
-    'classic-find-plus-pcmanfm.desktop', 'classic-find-plus-xfe.py')))
+    'classic-find-plus-pcmanfm.desktop', 'classic-find-plus-xfe.py', 'classic-find-plus-pcmanfm.desktop')))
 RESOURCE = Path(__file__).resolve().parent / 'integrations'
 if not RESOURCE.is_dir():
     RESOURCE = Path(__file__).resolve().parent.parent / 'data/integrations'
@@ -81,7 +81,7 @@ def version(manager):
 
 def path_for(manager, data, config, entry):
     if manager == 'thunar': return config / 'Thunar/uca.xml'
-    if manager == 'pcmanfm': return data / 'file-manager/actions/classic-find-plus-pcmanfm.desktop'
+    if manager in ('pcmanfm', 'pcmanfm-qt'): return data / 'file-manager/actions/classic-find-plus-pcmanfm.desktop'
     if manager == 'xfe': return Path.home() / '.config/xfe/scripts/Find with Classic Find Plus'
     if manager == 'caja': return config / 'caja/scripts/Find with Classic Find Plus'
     if manager == 'dolphin':
@@ -248,7 +248,7 @@ def optional(manager):
         roots = (Path('/usr/lib'), Path('/usr/lib64'), Path('/usr/local/lib'))
         found = any(list(base.glob('libfm/modules/gtk-menu-actions.so'))
                     for root in roots for base in (root, *root.glob('*-linux-gnu')))
-        return '' if found else 'GTK PCManFM requires libfm custom-action module (distro libfm-modules); PCManFM-Qt is not supported'
+        return '' if found else 'GTK PCManFM requires libfm custom-action module (distro libfm-modules)'
     if manager != 'caja': return ''
     namespace = manager.capitalize() if manager == 'caja' else 'Nautilus'
     code = "import gi; from gi.repository import GIRepository; r=GIRepository.Repository.get_default(); assert r.enumerate_versions(%r)" % namespace
@@ -290,7 +290,9 @@ def global_nemo(data):
             return True
     return False
 
-def status(manager, entry, data, config):
+def status(manager, entry, data, config, state=None):
+    if manager in SHARED_MANAGERS:
+        return shared_status(manager, state if state is not None else {manager: entry}, data, config)
     path = path_for(manager, data, config, entry)
     contents = read(path)
     part = xml_action(contents) if manager == 'thunar' else None
@@ -329,11 +331,112 @@ def status(manager, entry, data, config):
         'legacy_extension': legacy_caja is not None,
         'managed': digest(active if active is not None else legacy_caja) == entry.get('hash') if active is not None or legacy_caja is not None else False}
 
+SHARED_MANAGERS = ('pcmanfm', 'pcmanfm-qt')
+QT_ADMIN_TEMPLATE = 'classic-find-plus-pcmanfm-qt-admin.desktop'
+
+def shared_requests(state, contents):
+    qt = bool(state.get('pcmanfm-qt', {}).get('enabled', False))
+    gtk = state.get('pcmanfm', {})
+    # Freeze legacy GTK ownership before another manager acquires the shared file.
+    return {'pcmanfm': gtk.get('enabled', bool(contents and (gtk.get('installed') or not qt))),
+            'pcmanfm-qt': qt}
+
+def qt_admin_backend():
+    return any(Path(p).is_file() and os.access(p, os.X_OK) for p in (
+        '/usr/libexec/gvfsd-admin', '/usr/lib/gvfs/gvfsd-admin',
+        '/usr/lib/x86_64-linux-gnu/gvfs/gvfsd-admin'))
+
+def shared_status(manager, state, data, config):
+    entry = state.get(manager, {})
+    path = path_for(manager, data, config, entry)
+    active = read(path)
+    admin_path = path.with_name(QT_ADMIN_TEMPLATE)
+    admin = read(admin_path)
+    requested = shared_requests(state, active)
+    owners = ', '.join(m for m in SHARED_MANAGERS if requested[m])
+    detected = bool(shutil.which(manager))
+    missing = optional('pcmanfm') if manager == 'pcmanfm' else ('' if qt_admin_backend() else 'GVfs admin backend (gvfs-backends)')
+    current = active == read(RESOURCE / TEMPLATES['pcmanfm']) and (active is None or path.stat().st_mode & 0o7777 == 0o644)
+    admin_current = admin == read(RESOURCE / QT_ADMIN_TEMPLATE) and (admin is None or admin_path.stat().st_mode & 0o7777 == 0o644)
+    complete = active is not None and (manager == 'pcmanfm' or admin is not None)
+    installed = bool(entry.get('installed') or (manager == 'pcmanfm' and requested[manager] and active is not None))
+    method = ('Find + Open as Administrator in PCManFM-Qt via GVfs; ' if manager == 'pcmanfm-qt' else 'GTK Find action; ')
+    method += 'shared Find owners: ' + (owners or 'none')
+    if active is not None and not requested[manager]: method += '; shared Find visible through other integration'
+    if admin is not None: method += '; shared administrator action opens PCManFM-Qt'
+    return {'manager': manager, 'version': version(manager), 'detected': detected,
+        'installed': installed, 'configured': bool(requested[manager]),
+        'available': detected and not missing, 'enabled': bool(requested[manager] and complete and detected and not missing),
+        'missing': missing, 'reload': bool(entry.get('reload')), 'legacy_system': False,
+        'path': str(path), 'admin_path': str(admin_path), 'shared_find': active is not None,
+        'shared_owners': owners, 'admin_supported': qt_admin_backend(), 'method': method,
+        'legacy_extension': False,
+        'needs_update': bool(requested[manager] and (not current or (manager == 'pcmanfm-qt' and not admin_current))),
+        'managed': bool(active is not None and digest(active) == entry.get('hash') and
+                         (manager == 'pcmanfm' or (admin is not None and digest(admin) == entry.get('admin_hash'))))}
+
+def shared_update(operation, manager, state, data, config, state_path, state_bytes):
+    path = path_for(manager, data, config, state.get(manager, {}))
+    template = read(RESOURCE / TEMPLATES['pcmanfm'])
+    admin_template = read(RESOURCE / QT_ADMIN_TEMPLATE)
+    if not template or not admin_template: raise RuntimeError('Shared integration template missing')
+    original = read(path)
+    requested = shared_requests(state, original)
+    entry = dict(state.get(manager, {}))
+    installed = entry.get('installed') or (manager == 'pcmanfm' and requested[manager] and original is not None)
+    if operation == 'enable' and not installed: raise RuntimeError('Install this integration first')
+    if operation == 'install': entry['installed'] = True
+    else:
+        requested[manager] = operation == 'enable'
+        entry['installed'] = operation != 'remove' and bool(installed)
+        entry['reload'] = True
+    for m in SHARED_MANAGERS:
+        state[m] = dict(state.get(m, {}), enabled=bool(requested[m]))
+    state[manager].update(entry, enabled=bool(requested[manager]))
+    # Install records availability only, without activating or changing action files.
+    if operation == 'install':
+        atomic(state_path, (json.dumps(state, sort_keys=True, indent=2)+'\n').encode(), state_bytes)
+        return
+    desired = template if any(requested.values()) else None
+    fingerprints = [state.get(m, {}).get('hash') for m in SHARED_MANAGERS]
+    if original is not None and digest(original) not in fingerprints and original != template:
+        raise RuntimeError('Untracked or modified shared Find action; refusing overwrite/removal: ' + str(path))
+    plans = [(path, original, desired)]
+    if manager == 'pcmanfm-qt':
+        admin_path = path.with_name(QT_ADMIN_TEMPLATE)
+        before = read(admin_path)
+        if before is not None and digest(before) != entry.get('admin_hash') and before != admin_template:
+            raise RuntimeError('Untracked or modified administrator action; refusing overwrite/removal: ' + str(admin_path))
+        plans.append((admin_path, before, admin_template if requested[manager] else None))
+    # Preflight every owned path before writing the pair. Roll back only our exact bytes.
+    done = []
+    try:
+        for target, before, after in plans:
+            mode = target.stat().st_mode & 0o7777 if before is not None else 0o644
+            if after is not None:
+                if before != after or mode != 0o644:
+                    atomic(target, after, before, 0o644); done.append((target, before, after, mode))
+            elif before is not None:
+                if read(target) != before: raise RuntimeError('Integration changed during removal')
+                target.unlink(); done.append((target, before, after, mode))
+        for m in SHARED_MANAGERS:
+            state[m]['hash'] = digest(desired)
+            state[m]['reload'] = True
+        if manager == 'pcmanfm-qt': state[manager]['admin_hash'] = digest(plans[1][2])
+        atomic(state_path, (json.dumps(state, sort_keys=True, indent=2)+'\n').encode(), state_bytes)
+    except (OSError, RuntimeError):
+        for target, before, after, mode in reversed(done):
+            if read(target) != after: raise RuntimeError('Concurrent integration change; rollback refused: ' + str(target))
+            if before is None: target.unlink()
+            else: atomic(target, before, after, mode)
+        raise
+
+
 def validate_state(state):
     if not isinstance(state, dict) or not set(state) <= set(MANAGERS):
         raise RuntimeError('Invalid integration ownership state')
     for entry in state.values():
-        if not isinstance(entry, dict) or not set(entry) <= {'installed', 'reload', 'legacy', 'hash', 'nemo_original_disabled', 'nemo_last_disabled', 'caja_script', 'admin_hash'}:
+        if not isinstance(entry, dict) or not set(entry) <= {'installed', 'reload', 'legacy', 'hash', 'nemo_original_disabled', 'nemo_last_disabled', 'caja_script', 'admin_hash', 'enabled'}:
             raise RuntimeError('Invalid integration ownership entry')
         for key, value in entry.items():
             if key in ('hash', 'admin_hash'):
@@ -355,7 +458,7 @@ def main():
     state_bytes = read(state_path)
     state = validate_state(json.loads(state_bytes) if state_bytes else {})
     if operation == 'status':
-        rows = [status(m, state.get(m, {}), data, config) for m in MANAGERS]
+        rows = [status(m, state.get(m, {}), data, config, state) for m in MANAGERS]
         if '--keyfile' in sys.argv:
             keys = configparser.ConfigParser(interpolation=None)
             for row in rows:
@@ -370,6 +473,10 @@ def main():
         os.chmod(lock_path, 0o600); fcntl.flock(lock, fcntl.LOCK_EX)
         # Reload under lock; never save a stale process snapshot.
         state_bytes = read(state_path); state = validate_state(json.loads(state_bytes) if state_bytes else {})
+        if manager in SHARED_MANAGERS:
+            shared_update(operation, manager, state, data, config, state_path, state_bytes)
+            print(json.dumps(status(manager, state.get(manager, {}), data, config, state)))
+            return
         entry = state.get(manager, {})
         path = path_for(manager, data, config, entry); original = read(path)
         span = xml_action(original) if manager == 'thunar' else None
@@ -426,7 +533,7 @@ def main():
             entry['caja_script'] = True
         state[manager] = entry
         atomic(state_path, (json.dumps(state, sort_keys=True, indent=2) + '\n').encode(), state_bytes)
-    print(json.dumps(status(manager, entry, data, config)))
+    print(json.dumps(status(manager, entry, data, config, state)))
 
 if __name__ == '__main__':
     try: main()

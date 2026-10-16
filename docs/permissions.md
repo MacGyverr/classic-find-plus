@@ -47,3 +47,16 @@ GTK PCManFM and XFE now have optional Find integrations. PCManFM's isolated admi
 probe did not verify authenticated enumeration; XFE's safe GVfs administrative workflow
 is unverified. CFP installs no administrator action for either and makes no administrative
 transfer claim. Use the already supported, separately configured receiving manager above.
+
+
+PCManFM-Qt has a separate optional integration. Enabling it supplies Find and Open as
+Administrator together; the latter opens a GVfs admin URI in normal-user PCManFM-Qt,
+using the desktop Polkit agent. Its action may also appear in GTK PCManFM because the
+managers share the custom-action directory; it still opens Qt. Ensure gvfs-backends
+and the authentication agent are available, then restart affected managers.
+
+The native Qt1.4.1 selected-directory administrator launch and authorization prompt
+were exercised and cancelled. Authenticated directory enumeration and administrative
+copy/move acceptance were not verified. The transfer procedure above is a workflow to
+test on the receiving desktop, not a claim of verified Qt transfer support. CFP remains
+unprivileged and the receiving manager/GVfs owns authorization and transfer results.

@@ -1,10 +1,10 @@
-Classic Find Plus 1.0.11
+Classic Find Plus 1.0.12
 Created by MacGyverr / ChatGPT. GPL-3.0-or-later; see LICENSE and THIRD_PARTY.md.
 Project: https://github.com/MacGyverr/classic-find-plus
 Administrator search and the explicit root GUI work on the owner's Linux Mint 21.3 desktop.
 Real desktop denial/cancellation remains unreported; see docs/admin-search.md.
 
-Native Linux GTK3 file and folder search with optional Nemo/GNOME Files (Nautilus)/Dolphin/Caja/Thunar/GTK PCManFM/XFE integration. See README.md for dependency
+Native Linux GTK3 file and folder search with optional Nemo/GNOME Files (Nautilus)/Dolphin/Caja/Thunar/GTK PCManFM/PCManFM-Qt/XFE integration. See README.md for dependency
 commands, GNU Make and Meson builds, features and troubleshooting.
 
 DEB installation/update: download the matching package and double-click it, or run
@@ -146,8 +146,7 @@ coexistence limits, diagnostics and CLI controls; docs/permissions.md for protec
 PCManFM (GTK) and XFE integrations
 --------------------------------
 Enable each separately in Help/About → File Manager Integrations. GTK PCManFM uses
-libfm's supported custom actions (libfm-modules); PCManFM-Qt is a different application
-and is not enabled by this adapter. Find searches one selected local folder; background
+libfm's supported custom actions (libfm-modules); PCManFM-Qt has its own integration row. Find searches one selected local folder; background
 availability depends on the installed libfm menu provider. XFE uses Scripts → Find with
 Classic Find Plus: one folder searches itself, one regular file searches its parent,
 XFE1.45 requires a selection for its Scripts submenu; its empty background has no
@@ -184,3 +183,26 @@ existing destinations are never overwritten. Wait until searching finishes to re
 Renamed rows keep their new paths and sort order, or disappear if filters no longer match.
 Children of renamed directories leave the results; Find Now refreshes them. See
 docs/file-actions.md for safeguards and limits.
+
+PCManFM-Qt integration
+---------------------
+PCManFM-Qt is the Qt file manager commonly used with LXQt, separate from GTK PCManFM.
+Enable its row in Help/About → File Manager Integrations to install Find with Classic
+Find Plus and Open as Administrator together. Install alone leaves both inactive.
+Restart the manager after action changes. Find opens CFP at the selected local directory,
+overriding saved Look in, without automatically searching.
+
+Both PCManFM variants read ~/.local/share/file-manager/actions (or XDG_DATA_HOME).
+CFP shares one Find action and retains it while either integration is enabled; the status
+explains shared owners even when one row is disabled. Qt's administrator action can also
+appear in GTK PCManFM and always opens PCManFM-Qt. Disable Qt removes that action while
+retaining Find for an enabled GTK adapter. Unrelated or modified actions are preserved.
+
+Administrator access uses admin:/// URIs through GVfs/Polkit as your normal desktop user;
+it does not start a root file manager. Install the distribution's GVfs admin backend
+(Ubuntu/Mint: gvfs-backends) and use an active desktop authentication agent. CFP installs
+no dependencies and captures no credentials. Qt/GVfs report denied/cancelled authentication
+and location errors. Native Qt1.4.1 selected-folder Find and administrator authorization
+prompt were verified; authenticated browsing/transfers remain unverified. Background
+menu presence was verified, but its action launch needs desktop acceptance.
+See docs/integrations.md and docs/permissions.md.

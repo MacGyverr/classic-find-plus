@@ -33,7 +33,8 @@ def safe_path(path):
             fail('Non-directory ancestor: ' + str(part))
 
 def plan():
-    entries = {'bin/classic-find-plus-nautilus-admin': 'build-make/classic-find-plus-nautilus-admin',
+    entries = {'bin/classic-find-plus-pcmanfm-qt-admin': 'build-make/classic-find-plus-pcmanfm-qt-admin',
+               'bin/classic-find-plus-nautilus-admin': 'build-make/classic-find-plus-nautilus-admin',
                'bin/classic-find-plus-thunar-admin': 'build-make/classic-find-plus-thunar-admin',
                'bin/classic-find-plus': 'build-make/classic-find-plus',
                'bin/classic-find': '@classic-find-plus',
@@ -49,7 +50,7 @@ def plan():
         'share/classic-find-plus/nautilus-support.py': 'scripts/nautilus-support.py'})
     for name in ['classic-find-plus.nemo_action', 'classic-find-plus-nautilus.py', 'classic-find-plus-caja.py',
                  'classic-find-plus.desktop', 'classic-find-plus-thunar.xml', 'classic-find-plus-thunar-admin.xml', 'classic-find-plus-caja-script.py',
-    'classic-find-plus-pcmanfm.desktop', 'classic-find-plus-xfe.py']:
+    'classic-find-plus-pcmanfm.desktop', 'classic-find-plus-xfe.py', 'classic-find-plus-pcmanfm-qt-admin.desktop']:
         entries['share/classic-find-plus/integrations/' + name] = 'data/integrations/' + name
     for name in ['LICENSE', 'README.md', 'readme.txt', 'CHANGELOG.md', 'THIRD_PARTY.md']:
         entries['share/doc/classic-find-plus/' + name] = name

@@ -1,0 +1,16 @@
+[Desktop Entry]
+Type=Action
+Name=Open as Administrator
+Description=Open this directory in PCManFM-Qt using GVfs administrative access
+Icon=system-file-manager
+Profiles=Administrator;
+TargetContext=true
+TargetLocation=true
+Folders=/*;
+MimeTypes=inode/directory;
+SelectionCount==1
+TryExec=pcmanfm-qt
+
+[X-Action-Profile Administrator]
+Name=Open as Administrator
+Exec=classic-find-plus-pcmanfm-qt-admin -- %f

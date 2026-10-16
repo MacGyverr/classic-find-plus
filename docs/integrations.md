@@ -15,6 +15,7 @@ CFP never installs dependencies or additional file managers, nor restarts one au
 | Caja | executable Scripts menu launcher | Python 3; `$XDG_CONFIG_HOME/caja/scripts/Find with Classic Find Plus` |
 | Thunar | Find + Open as Administrator directory actions | Thunar UCA plugin; `$XDG_CONFIG_HOME/Thunar/uca.xml` |
 | PCManFM (GTK) | libfm Find custom action | GTK PCManFM, `libfm-modules`; `$XDG_DATA_HOME/file-manager/actions/classic-find-plus-pcmanfm.desktop` |
+| PCManFM-Qt | shared Find + Qt administrator custom actions | PCManFM-Qt, GVfs admin backend; `$XDG_DATA_HOME/file-manager/actions` |
 | XFE | executable Scripts menu launcher | XFE, Python3; `~/.config/xfe/scripts/Find with Classic Find Plus` |
 
 XDG_DATA_HOME normally means `~/.local/share`, XDG_CONFIG_HOME `~/.config`. All adapters
@@ -199,11 +200,11 @@ The template uses libfm's absolute-local-folder glob, directory MIME and single-
 conditions. It avoids libfm1.3.2's crashing Schemes condition; no file-manager files are
 patched. Native GTK PCManFM1.3.2/libfm1.3.2 selected-folder and restarted background menus
 and exact child/current-folder CFP URI launches were executed.
-PCManFM-Qt has a different integration mechanism and is outside this adapter.
+PCManFM-Qt is a separate application with its own integration row; both share the action directory (see below).
 
 The authorized read-only `admin:///opt` probe did not demonstrate authenticated directory
 enumeration in the isolated session. CFP consequently supplies no Open as Administrator
-PCManFM action. Administrative transfers are unverified. This is not a claim that every
+GTK-specific PCManFM action. Enabling the Qt integration can expose its Qt administrator action here. Administrative transfers are unverified. This is not a claim that every
 PCManFM/GVfs build lacks the capability; confirm it separately before extending support.
 
 ## XFE
@@ -219,3 +220,48 @@ only remove the exact unchanged CFP script; unrelated scripts/configuration stay
 Native XFE1.45's Scripts menu and actual selected-folder CFP launch were executed.
 XFE's local-filesystem/root-launch features do not demonstrate a safe GVfs administrative
 workflow. CFP offers no XFE administrator action and does not launch XFE as root.
+
+## PCManFM-Qt
+
+PCManFM-Qt, commonly used by LXQt, is distinct from GTK PCManFM. Install its row in
+Help/About → File Manager Integrations, then Enable. One control reconciles both:
+
+- `classic-find-plus-pcmanfm.desktop`: Find with Classic Find Plus.
+- `classic-find-plus-pcmanfm-qt-admin.desktop`: Open as Administrator.
+
+Both live in `$XDG_DATA_HOME/file-manager/actions` (normally
+`~/.local/share/file-manager/actions`). Restart affected managers after changes.
+A fresh CFP installation enables none. Find opens the selected local directory in CFP,
+overrides saved Look in, and waits for Find Now. Root and unusual local names are supported.
+Both templates use `%f`: GTK/libfm and Qt/libfm-qt quote the native path before parsing
+argv. libfm-qt1.4.0 inserts `%u` unquoted, breaking file URIs containing literal apostrophes;
+no shell command or file-manager patch is used to work around this.
+
+GTK and Qt consume the same directory. CFP deliberately shares one Find action with
+separate requested-owner states, rather than installing duplicate entries. Disabling or
+removing one row preserves Find while the other remains enabled. A disabled row may
+still see Find through the other integration; status identifies these shared owners.
+Qt alone owns the administrator action, which can also appear in GTK and always launches
+PCManFM-Qt. Do not interpret it as GTK administrative-mode support. libfm-qt1.4.0 does
+not implement OnlyShowIn/NotShowIn filtering. Disable Qt to remove its owned administrator
+action; unrelated or modified files are never overwritten or deleted. Repair actions
+reconciles unchanged older CFP resources, including the earlier `%u` Find template.
+
+The administrator helper validates a local directory/path or file URI, constructs an
+encoded `admin:///…` URI and launches PCManFM-Qt as the normal user. Root invocation is
+refused. It requires a GVfs admin backend (Ubuntu/Mint commonly `gvfs-backends`) and an
+active desktop Polkit agent. Missing executable/backend and invalid input receive a
+CFP error; Qt/GVfs own authorization, denial/cancellation and location errors after launch.
+CFP does not capture credentials, run sudo/pkexec, alter ownership/permissions, or add a
+privileged file-transfer worker. Read-only Refresh probes installed versions/backend
+availability; it neither launches managers nor proves their menus work.
+
+Executed on native PCManFM-Qt1.4.1/libfm-qt1.4.0: selected-folder Find opens CFP with exact
+Unicode/space/single and double quotes/hash/percent path, no automatic search; administrator
+action launches encoded URI at UID1000 and displays GVfs authorization, then cancellation.
+Selected/background menus each showed one Find and one administrator action. Background
+launch/starting-directory behavior, authenticated enumeration and administrative transfers
+remain unverified. GTK PCManFM1.3.2 with both integrations enabled showed one Find and one
+Qt administrator entry; its Find launched the same unusual native directory exactly.
+Lifecycle tests cover both enable/disable orders, old state upgrades, modes, unrelated and
+modified files, symlinks, paired-write rollback and missing optional support.
