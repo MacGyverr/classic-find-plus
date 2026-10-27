@@ -30,3 +30,10 @@ struct _CfCriteria {
 
 /* Selected attribute, with Created fallback only when the birth attribute is absent. */
 const char *cf_criteria_date_attribute(const CfCriteria *criteria, GFileInfo *info);
+
+/* Name/extension/kind pruning without display, ownership or content metadata.
+ * FALSE rejects only this result candidate; directories must still be traversed. */
+gboolean cf_criteria_matches_name(const CfCriteria *criteria, GFileInfo *info);
+
+/* Active size/date/ownership/permission checks, without content-type probing. */
+gboolean cf_criteria_matches_metadata(const CfCriteria *criteria, GFileInfo *info);

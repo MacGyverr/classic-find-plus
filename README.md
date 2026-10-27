@@ -32,7 +32,7 @@ Windows 98 style Advanced search.
 
 Context menu installation.
 
-**Version 1.0.12** — a native Linux file and folder search application, inspired by the classic
+**Version 1.0.13** — a native Linux file and folder search application, inspired by the classic
 Find dialog and styled by your GTK3 desktop theme. Created by MacGyverr / ChatGPT.
 [GitHub project](https://github.com/MacGyverr/classic-find-plus) · GPL-3.0-or-later.
 
@@ -43,8 +43,8 @@ Results support fifteen configurable columns, exact Bytes/Bits, sorting, file ac
 multi-selection, drag-and-drop into Nemo, and CSV or tab-delimited TXT export.
 
 Linux Mint with Nemo is the primary platform. GTK3 runs on other Linux desktops with an X11
-or Wayland session; optional menus support Nemo, GNOME Files (Nautilus), Dolphin, Caja, Thunar, GTK PCManFM, PCManFM-Qt and XFE. Debian WSL2 is also used for
-development verification. Fedora, Arch and openSUSE native builds are documented but have not
+or Wayland session; optional menus support Nemo, GNOME Files (Nautilus), Dolphin, Caja, Thunar, GTK PCManFM, PCManFM-Qt and XFE. 
+Fedora, Arch and openSUSE native builds are documented but have not
 been tested on those distributions. No Windows-native application is provided.
 
 Results clipboard commands: Copy Name to Clipboard copies the stem (final extension
@@ -77,7 +77,7 @@ Children of renamed directories leave the results; Find Now refreshes them. See
 ## Install a Debian package
 
 Download the DEB for **your distribution and architecture** from the project's Releases page
-when available. Building 1.0.12 does not imply its DEB has been published.
+when available. Building 1.0.13 does not imply its DEB has been published.
 Mint 21.3 uses Ubuntu 22.04 (jammy) libraries; a DEB built on newer Debian may not work there.
 Double-click the downloaded DEB to use your graphical package installer, or run:
 

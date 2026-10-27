@@ -4,7 +4,7 @@
 #include "traversal.h"
 
 #define KEY "cf-results-sync"
-#define ATTRIBUTES "standard::name,standard::type,standard::is-symlink,standard::size,standard::icon,standard::content-type,time::created,time::created-usec,time::access,time::access-usec,unix::mode,unix::uid,unix::gid,time::modified,time::modified-usec,id::filesystem,id::file"
+#define ATTRIBUTES "standard::name,standard::type,standard::is-symlink,standard::size,standard::fast-content-type,time::created,time::created-usec,time::access,time::access-usec,unix::mode,unix::uid,unix::gid,time::modified,time::modified-usec,id::filesystem,id::file"
 #define WATCH_LIMIT 64
 #ifdef CF_SYNC_TEST_FAST
 #define WINDOW_US (3 * G_USEC_PER_SEC)
@@ -155,6 +155,25 @@ static gboolean in_scope(Job *job, GFile *file, GCancellable *cancel)
     }
     return parent != NULL;
 }
+/* Display refresh must follow the same no-sniff policy as enumeration.
+ * Explicit MIME filters alone can request backend classification after cheap tests. */
+static GFileInfo *query_candidate(Job *job, GFile *file, GCancellable *cancel, GError **error)
+{
+    gboolean native = g_file_is_native(file), backend_type = FALSE;
+    g_autoptr(GFileInfo) info = g_file_query_info(file,
+        native ? ATTRIBUTES : ATTRIBUTES ",owner::user,owner::group",
+        G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS, cancel, error);
+    if (complete_info(job->criteria, info) && job->criteria && job->criteria->type >= CF_TYPE_IMAGE &&
+        cf_criteria_matches_name(job->criteria, info) && cf_criteria_matches_metadata(job->criteria, info)) {
+        g_clear_object(&info);
+        info = g_file_query_info(file, native ? ATTRIBUTES ",standard::content-type" :
+            ATTRIBUTES ",owner::user,owner::group,standard::content-type",
+            G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS, cancel, error);
+        backend_type = TRUE;
+    }
+    if (info) cf_metadata_prepare_type(info, backend_type);
+    return g_steal_pointer(&info);
+}
 static void verify_worker(GTask *task, gpointer source, gpointer data, GCancellable *cancel)
 {
     (void)source;
@@ -163,15 +182,14 @@ static void verify_worker(GTask *task, gpointer source, gpointer data, GCancella
     for (guint n = 0; n < job->checks->len && !g_cancellable_is_cancelled(cancel); n++) {
         Check *check = g_ptr_array_index(job->checks, n);
         g_autoptr(GError) error = NULL;
-        check->info = g_file_query_info(check->original, g_file_is_native(check->original) ? ATTRIBUTES : ATTRIBUTES ",owner::user,owner::group", G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS, cancel, &error);
+        check->info = query_candidate(job, check->original, cancel, &error);
         if (check->info) {
             if (complete_info(job->criteria, check->info)) check->result_file = g_object_ref(check->original);
         }
         else if (missing(error)) {
             check->outcome = REMOVE;
             if (check->destination && check->identity && in_scope(job, check->destination, cancel)) {
-                check->info = g_file_query_info(check->destination, g_file_is_native(check->destination) ? ATTRIBUTES : ATTRIBUTES ",owner::user,owner::group",
-                    G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS, cancel, NULL);
+                check->info = query_candidate(job, check->destination, cancel, NULL);
                 const char *id = check->info ? g_file_info_get_attribute_string(check->info, G_FILE_ATTRIBUTE_ID_FILE) : NULL;
                 if (id && !g_strcmp0(id, check->identity) && complete_info(job->criteria, check->info))
                     check->result_file = g_object_ref(check->destination);
@@ -571,6 +589,12 @@ void cf_results_sync_invalidate_descendants(GtkTreeView *view, GFile *previous)
         if (file && g_file_has_prefix(file, previous)) valid = gtk_list_store_remove(store, &iter);
         else valid = gtk_tree_model_iter_next(model, &iter);
     }
+}
+gboolean cf_results_sync_needs_mime_type(GtkTreeView *view, GFileInfo *info)
+{
+    Sync *s = g_object_get_data(G_OBJECT(view), KEY);
+    return s && !s->closed && s->criteria && s->criteria->type >= CF_TYPE_IMAGE &&
+        cf_criteria_matches_name(s->criteria, info) && cf_criteria_matches_metadata(s->criteria, info);
 }
 void cf_results_sync_renamed(GtkTreeView *view, GFile *previous, const CfResult *result)
 {

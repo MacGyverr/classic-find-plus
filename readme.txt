@@ -1,4 +1,4 @@
-Classic Find Plus 1.0.12
+Classic Find Plus 1.0.13
 Created by MacGyverr / ChatGPT. GPL-3.0-or-later; see LICENSE and THIRD_PARTY.md.
 Project: https://github.com/MacGyverr/classic-find-plus
 Administrator search and the explicit root GUI work on the owner's Linux Mint 21.3 desktop.

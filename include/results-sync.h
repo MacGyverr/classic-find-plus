@@ -13,3 +13,7 @@ void cf_results_sync_renamed(GtkTreeView *view, GFile *previous, const CfResult 
 
 /* Invalidate paths beneath a renamed entry; no filesystem rescan. */
 void cf_results_sync_invalidate_descendants(GtkTreeView *view, GFile *previous);
+
+/* Main-thread predicate only: captured MIME filter still needs backend type
+ * after cheap checks; no filesystem or ownership lookup. */
+gboolean cf_results_sync_needs_mime_type(GtkTreeView *view, GFileInfo *info);

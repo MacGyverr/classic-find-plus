@@ -50,12 +50,17 @@ write opens, filesystem mutations and program execution. It is an additional gua
 the narrow API, not a general-purpose containment service. No setuid binary, shell interface,
 sudo subprocess, file mutation/export method or credential cache is provided.
 
-MIME detection retains existing GIO behavior: when a name is ambiguous, the verified GLib
+Filename/metadata-only searches populate MIME, Detailed Type and icons from filename-based
+estimates without reading file bodies, including for unknown extensions. Explicit MIME/type
+filters alone may request content-derived classification after cheap filters pass. For
+those filters, when a name is ambiguous, the verified GLib
 2.72 implementation reads at most 4096 initial bytes (2.84.4 reads up to 16384 bytes) to classify the file; bytes are never
 returned over IPC. It avoids sniffing zero-size pseudo-files and known special file kinds.
 See the [Mint-target GLib implementation](https://github.com/GNOME/glib/blob/2.72.1/gio/glocalfileinfo.c)
 and [development GLib implementation](https://github.com/GNOME/glib/blob/2.84.4/gio/glocalfileinfo.c).
-This bounded metadata sniff can affect access times on filesystems where O_NOATIME is unavailable.
+Only that explicit-filter metadata sniff can affect access times on filesystems where
+O_NOATIME is unavailable. Text/Hex searches retain their separate pinned streaming reads;
+they do not add a display-only MIME sniff. No file bodies cross administrator IPC.
 
 ## Installation and troubleshooting
 

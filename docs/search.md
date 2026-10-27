@@ -248,3 +248,28 @@ resolved against the local machine's NSS database; missing remote names remain n
 
 Find Plus Allow admin search uses the same effective filters and captures relative expressions
 before authentication. Other tabs ignore it; see [administrator searches](admin-search.md).
+
+
+## Slow metadata filesystems (CIFS/NFS and local mounts)
+
+Native/mounted searches enumerate structural information and any active size/date/
+ownership/permission attributes first. Filename, extension, filesystem-kind and cheap
+metadata filters reject result candidates before GIO MIME/icon and full display metadata
+are requested. A nonmatching directory is still traversed unless an exclusion prunes it.
+Filesystem and symlink identity checks remain enabled as selected. Remote GIO backends
+retain their batched enumeration metadata, avoiding new per-match network queries.
+
+Ordinary filename-only and metadata-only searches use GIO's filename-based MIME estimate
+for MIME Type, Detailed Type and themed icons. Unknown suffixes remain generic/unknown;
+showing, sorting or exporting these columns never opens result contents to identify them.
+Timestamps, size, identity and ownership still come from filesystem metadata. Result
+synchronization and post-rename display refresh follow this same policy.
+
+An explicit image/audio/video/text type filter can request GIO's content-derived type
+where the backend supports it, after filename and inexpensive metadata checks pass.
+This preserves the existing type-filter semantics. Internal provenance distinguishes
+filename estimates from explicit backend classification; the existing columns and exports
+keep their normal MIME identifiers and descriptions. Containing Text/Hex use the existing
+checked streaming reader, without a separate content-based MIME pass just for display.
+Explicit Open/Open With/Properties operations retain their own on-demand behavior.
+No cache, mount, permission or server configuration changes are required.

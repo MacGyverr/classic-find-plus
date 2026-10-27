@@ -345,18 +345,11 @@ CfCriteria *cf_criteria_new(const CfCriteriaInput *in, GDateTime *now, GError **
     return g_steal_pointer(&c);
 }
 
-gboolean cf_criteria_matches(const CfCriteria *c, GFileInfo *info)
+gboolean cf_criteria_matches_name(const CfCriteria *c, GFileInfo *info)
 {
     GFileType type = g_file_info_get_file_type(info);
     const char *raw = g_file_info_get_name(info);
-    if (!raw) return FALSE;
-    if (c->no_hidden && *raw == '.') return FALSE;
-    if (c->has_uid && (!g_file_info_has_attribute(info, G_FILE_ATTRIBUTE_UNIX_UID) ||
-        g_file_info_get_attribute_uint32(info, G_FILE_ATTRIBUTE_UNIX_UID) != c->uid)) return FALSE;
-    if (c->has_gid && (!g_file_info_has_attribute(info, G_FILE_ATTRIBUTE_UNIX_GID) ||
-        g_file_info_get_attribute_uint32(info, G_FILE_ATTRIBUTE_UNIX_GID) != c->gid)) return FALSE;
-    if (c->has_permissions && (!g_file_info_has_attribute(info, G_FILE_ATTRIBUTE_UNIX_MODE) ||
-        (g_file_info_get_attribute_uint32(info, G_FILE_ATTRIBUTE_UNIX_MODE) & 07777) != c->permissions)) return FALSE;
+    if (!raw || (c->no_hidden && *raw == '.')) return FALSE;
     g_autofree char *display = g_filename_display_name(raw);
     g_autofree char *folded = c->case_sensitive ? g_strdup(display) : g_utf8_casefold(display, -1);
     if (excludes_name(c, display, folded, type == G_FILE_TYPE_DIRECTORY)) return FALSE;
@@ -373,12 +366,18 @@ gboolean cf_criteria_matches(const CfCriteria *c, GFileInfo *info)
     }
     if (c->type == CF_TYPE_FILES && type != G_FILE_TYPE_REGULAR) return FALSE;
     if (c->type == CF_TYPE_FOLDERS && type != G_FILE_TYPE_DIRECTORY) return FALSE;
-    if (c->type >= CF_TYPE_IMAGE) {
-        const char *content = g_file_info_get_content_type(info);
-        g_autofree char *mime = content ? g_content_type_get_mime_type(content) : NULL;
-        const char *prefixes[] = { "image/", "audio/", "video/", "text/" };
-        if (!mime || !g_str_has_prefix(mime, prefixes[c->type - CF_TYPE_IMAGE])) return FALSE;
-    }
+    return TRUE;
+}
+
+gboolean cf_criteria_matches_metadata(const CfCriteria *c, GFileInfo *info)
+{
+    GFileType type = g_file_info_get_file_type(info);
+    if (c->has_uid && (!g_file_info_has_attribute(info, G_FILE_ATTRIBUTE_UNIX_UID) ||
+        g_file_info_get_attribute_uint32(info, G_FILE_ATTRIBUTE_UNIX_UID) != c->uid)) return FALSE;
+    if (c->has_gid && (!g_file_info_has_attribute(info, G_FILE_ATTRIBUTE_UNIX_GID) ||
+        g_file_info_get_attribute_uint32(info, G_FILE_ATTRIBUTE_UNIX_GID) != c->gid)) return FALSE;
+    if (c->has_permissions && (!g_file_info_has_attribute(info, G_FILE_ATTRIBUTE_UNIX_MODE) ||
+        (g_file_info_get_attribute_uint32(info, G_FILE_ATTRIBUTE_UNIX_MODE) & 07777) != c->permissions)) return FALSE;
     if (c->size_mode != CF_SIZE_ALL) {
         if (type != G_FILE_TYPE_REGULAR || !g_file_info_has_attribute(info, G_FILE_ATTRIBUTE_STANDARD_SIZE)) return FALSE;
         goffset signed_size = g_file_info_get_size(info);
@@ -395,6 +394,18 @@ gboolean cf_criteria_matches(const CfCriteria *c, GFileInfo *info)
         if (!cf_file_time(info, attribute, &stamp)) return FALSE;
         if (c->has_start && stamp < c->date_start) return FALSE;
         if (c->has_end && stamp >= c->date_end) return FALSE;
+    }
+    return TRUE;
+}
+
+gboolean cf_criteria_matches(const CfCriteria *c, GFileInfo *info)
+{
+    if (!cf_criteria_matches_name(c, info) || !cf_criteria_matches_metadata(c, info)) return FALSE;
+    if (c->type >= CF_TYPE_IMAGE) {
+        const char *content = g_file_info_get_content_type(info);
+        g_autofree char *mime = content ? g_content_type_get_mime_type(content) : NULL;
+        const char *prefixes[] = { "image/", "audio/", "video/", "text/" };
+        if (!mime || !g_str_has_prefix(mime, prefixes[c->type - CF_TYPE_IMAGE])) return FALSE;
     }
     return TRUE;
 }

@@ -1,3 +1,4 @@
+#include "metadata.h"
 #include "input-limits.h"
 #include "file-time.h"
 #include "result-actions.h"
@@ -9,6 +10,7 @@
 #include "result-rename.h"
 
 #define INFO "standard::name,standard::type,standard::is-symlink,standard::size,standard::content-type,standard::icon,time::created,time::created-usec,time::access,time::access-usec,unix::mode,unix::uid,unix::gid,owner::user,owner::group,time::modified,time::modified-usec,access::can-read,access::can-write,id::file"
+#define REFRESH_INFO "standard::name,standard::type,standard::is-symlink,standard::size,standard::fast-content-type,time::created,time::created-usec,time::access,time::access-usec,unix::mode,unix::uid,unix::gid,owner::user,owner::group,time::modified,time::modified-usec,access::can-read,access::can-write,id::file"
 typedef enum { OPEN, OPEN_WITH, FOLDER, COPY, CUT, RENAME, TRASH, PROPERTIES } Action;
 typedef struct {
     GWeakRef view;
@@ -18,6 +20,7 @@ typedef struct {
     GHashTable *ids;
     Action action;
     guint index, generation;
+    gboolean refresh_backend;
     const char *access_hint;
     const char *readonly_hint;
     char *name;
@@ -118,6 +121,13 @@ static void refreshed(GObject *source, GAsyncResult *result, gpointer data)
                 "Rename completed, but the destination changed before it could be refreshed. Search again.");
             record_error(r, error);
         } else {
+            if (!r->refresh_backend && cf_results_sync_needs_mime_type(view, info)) {
+                r->refresh_backend = TRUE;
+                g_file_query_info_async(G_FILE(source), REFRESH_INFO ",standard::content-type",
+                    G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS, G_PRIORITY_DEFAULT, r->cancel, refreshed, r);
+                return;
+            }
+            cf_metadata_prepare_type(info, r->refresh_backend);
             CfResult row = { G_FILE(source), info };
             cf_results_sync_renamed(view, g_ptr_array_index(r->files, r->index), &row);
         }
@@ -140,7 +150,8 @@ static void mutated(GObject *source, GAsyncResult *result, gpointer data)
         cf_results_remove(GTK_LIST_STORE(gtk_tree_view_get_model(view)), G_FILE(source));
     if (file && current && r->action == RENAME) {
         if (!g_file_equal(file, G_FILE(source))) cf_results_sync_invalidate_descendants(view, G_FILE(source));
-        g_file_query_info_async(file, INFO, G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS,
+        r->refresh_backend = FALSE;
+        g_file_query_info_async(file, REFRESH_INFO, G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS,
                                G_PRIORITY_DEFAULT, r->cancel, refreshed, r);
         return;
     }

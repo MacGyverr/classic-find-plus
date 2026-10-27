@@ -4,7 +4,8 @@
 #include "traversal.h"
 
 #define QUEUE_LIMIT 256
-#define ATTRIBUTES "standard::name,standard::display-name,standard::type,standard::is-symlink,standard::size,standard::icon,standard::content-type,time::created,time::created-usec,time::access,time::access-usec,unix::mode,unix::uid,unix::gid,time::modified,time::modified-usec,id::filesystem,id::file"
+#define ENUM_ATTRIBUTES "standard::name,standard::type,standard::is-symlink"
+#define ATTRIBUTES "standard::name,standard::display-name,standard::type,standard::is-symlink,standard::size,standard::fast-content-type,time::created,time::created-usec,time::access,time::access-usec,unix::mode,unix::uid,unix::gid,time::modified,time::modified-usec,id::filesystem,id::file"
 
 struct _CfSearch {
     gint refs;
@@ -79,7 +80,26 @@ static gboolean push_directory(CfSearch *s, GPtrArray *stack, GFile *dir)
     g_mutex_lock(&s->mutex);
     s->directories_enumerated++;
     g_mutex_unlock(&s->mutex);
-    GFileEnumerator *enumerator = g_file_enumerate_children(dir, g_file_is_native(dir) ? ATTRIBUTES : ATTRIBUTES ",owner::user,owner::group",
+    /* Remote VFS enumerations batch safe metadata, including filename MIME
+     * estimates. Never request content-type or icon here: either may sniff data
+     * before filename/cheap metadata rejection, even without content search. */
+    g_autoptr(GString) attributes = g_string_new(ENUM_ATTRIBUTES);
+    const CfCriteria *c = s->criteria;
+    if (c->size_mode != CF_SIZE_ALL) g_string_append(attributes, ",standard::size");
+    if (c->has_uid) g_string_append(attributes, ",unix::uid");
+    if (c->has_gid) g_string_append(attributes, ",unix::gid");
+    if (c->has_permissions) g_string_append(attributes, ",unix::mode");
+    if (c->has_start || c->has_end) {
+        if (c->date_field == CF_DATE_ACCESSED)
+            g_string_append(attributes, ",time::access,time::access-usec");
+        else {
+            g_string_append(attributes, ",time::modified,time::modified-usec");
+            if (c->date_field == CF_DATE_CREATED)
+                g_string_append(attributes, ",time::created,time::created-usec");
+        }
+    }
+    GFileEnumerator *enumerator = g_file_enumerate_children(dir,
+        g_file_is_native(dir) ? attributes->str : ATTRIBUTES ",owner::user,owner::group",
         G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS, s->cancel, &error);
     if (!enumerator) {
         record_error(s, dir, error->message);
@@ -109,7 +129,12 @@ static void publish(CfSearch *s, GFile *file, GFileInfo *info)
 
 static void remote_result(CfResult *r, gpointer data)
 {
-    publish(data, r->file, r->info);
+    CfSearch *s = data;
+    /* The worker already normalized MIME/icon. Preserve provenance locally
+     * without extending the strict administrator IPC attribute allowlist. */
+    g_file_info_set_attribute_string(r->info, CF_METADATA_MIME_SOURCE,
+        s->criteria->type >= CF_TYPE_IMAGE ? "backend" : "filename");
+    publish(s, r->file, r->info);
     cf_result_free(r);
 }
 static void remote_stats(const CfSearchStats *stats, gpointer data)
@@ -201,6 +226,10 @@ static void worker(gpointer data, gpointer unused)
         }
         const char *name = g_file_info_get_name(info);
         if (!name) continue;
+        /* Some remote backends omit the false boolean even when requested.
+         * Avoid newer GLib criticals; NOFOLLOW type still identifies a link. */
+        if (!g_file_info_has_attribute(info, G_FILE_ATTRIBUTE_STANDARD_IS_SYMLINK))
+            g_file_info_set_is_symlink(info, g_file_info_get_file_type(info) == G_FILE_TYPE_SYMBOLIC_LINK);
         g_autoptr(GFile) child = g_file_get_child(frame->directory, name);
         g_mutex_lock(&s->mutex);
         s->scanned++;
@@ -211,14 +240,32 @@ static void worker(gpointer data, gpointer unused)
             }
             continue; /* No enumeration, filesystem-ID query or metadata preparation. */
         }
-        if (cf_criteria_matches(s->criteria, info)) {
+        /* Enumeration is structural only: native MIME/icon requests can read
+         * data even for filenames that do not match, especially costly on CIFS.
+         * Keep the lexical info for recursion, and revalidate full candidates. */
+        g_autoptr(GFileInfo) result_info = NULL;
+        if (cf_criteria_matches_name(s->criteria, info) && cf_criteria_matches_metadata(s->criteria, info)) {
+            gboolean backend_type = s->criteria->type >= CF_TYPE_IMAGE;
+            if (!g_file_is_native(child) && !backend_type) result_info = g_object_ref(info);
+            else {
+                g_clear_error(&error);
+                const char *attributes = g_file_is_native(child) ?
+                    (backend_type ? ATTRIBUTES ",standard::content-type" : ATTRIBUTES) :
+                    ATTRIBUTES ",owner::user,owner::group,standard::content-type";
+                result_info = g_file_query_info(child, attributes,
+                    G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS, s->cancel, &error);
+                if (!result_info) record_error(s, child, error->message);
+            }
+            if (result_info) cf_metadata_prepare_type(result_info, backend_type);
+        }
+        if (result_info && cf_criteria_matches(s->criteria, result_info)) {
             gboolean allowed = TRUE;
             g_clear_error(&error);
             allowed = cf_traversal_content_matches(s->criteria,s->root,child,s->cancel,&error);
             if (error) record_error(s,child,error->message);
             if (allowed) {
-                if (g_file_is_native(child)) cf_metadata_prepare(metadata, info);
-                publish(s, child, info);
+                if (g_file_is_native(child)) cf_metadata_prepare(metadata, result_info);
+                publish(s, child, result_info);
             }
         }
         if (s->criteria->recursive && s->criteria->follow_symlinks) {

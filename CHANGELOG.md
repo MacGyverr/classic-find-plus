@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.0.13
+
+- Avoid native/mounted MIME and icon data probing for filenames rejected by search
+  criteria. Fetch complete display metadata only for accepted candidates.
+- Use filename-based MIME/Detail/icons for ordinary searches and display refreshes;
+  unknown suffixes stay generic without body reads, even with those columns visible.
+  Explicit MIME filters alone request content-based classification after cheap checks;
+  Text/Hex avoids a redundant display sniff.
+- Request cheap metadata only for active prefilters; preserve directory exclusion,
+  symlink identities, filesystem boundaries, cancellation and result metadata.
+- Keep remote VFS enumeration batched; handle omitted false symlink attributes
+  without repeated GLib criticals.
+- Verify identical 7,520-result CIFS/GVfs sets; measured CIFS backend falls from
+  451.74 seconds to about 5–7 seconds on the tested share, without mount changes.
+
 ## 1.0.12
 
 - Add opt-in PCManFM-Qt Find and Open as Administrator through one integration control.

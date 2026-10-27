@@ -61,3 +61,38 @@ char *cf_metadata_owner(GFileInfo *info, gboolean group)
         return g_strdup_printf("%u", g_file_info_get_attribute_uint32(info, number));
     return g_strdup("");
 }
+
+void cf_metadata_prepare_type(GFileInfo *info, gboolean backend_type)
+{
+    /* A stat-denied backend may return only a name without a GError. Callers
+     * retain such partial rows; do not invent type data or trip strict getters. */
+    if (!g_file_info_has_attribute(info, G_FILE_ATTRIBUTE_STANDARD_TYPE) ||
+        !g_file_info_has_attribute(info, G_FILE_ATTRIBUTE_STANDARD_NAME)) return;
+    GFileType kind = g_file_info_get_file_type(info);
+    if (!g_file_info_has_attribute(info, G_FILE_ATTRIBUTE_STANDARD_IS_SYMLINK))
+        g_file_info_set_is_symlink(info, kind == G_FILE_TYPE_SYMBOLIC_LINK);
+    g_autofree char *guess = NULL;
+    const char *type;
+    if (backend_type) {
+        /* A backend lacking this attribute must still fail the explicit filter;
+         * do not silently substitute a filename estimate for its classification. */
+        type = g_file_info_get_content_type(info);
+        if (!type) return;
+    } else {
+        type = g_file_info_get_attribute_string(info, G_FILE_ATTRIBUTE_STANDARD_FAST_CONTENT_TYPE);
+        if (!type || !*type) {
+            if (kind == G_FILE_TYPE_DIRECTORY) type = "inode/directory";
+            else if (kind == G_FILE_TYPE_SYMBOLIC_LINK) type = "inode/symlink";
+            else if (kind == G_FILE_TYPE_SPECIAL) type = "application/octet-stream";
+            else {
+                /* NULL data is essential: unknown names stay generic. */
+                guess = g_content_type_guess(g_file_info_get_name(info), NULL, 0, NULL);
+                type = guess ? guess : "application/octet-stream";
+            }
+        }
+        g_file_info_set_content_type(info, type);
+    }
+    g_file_info_set_attribute_string(info, CF_METADATA_MIME_SOURCE, backend_type ? "backend" : "filename");
+    g_autoptr(GIcon) icon = g_content_type_get_icon(type);
+    if (icon) g_file_info_set_icon(info, icon);
+}
