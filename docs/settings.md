@@ -52,7 +52,7 @@ expressions stay as entered in the form and INI; each search evaluates them usin
 Results synchronization continues using that execution's effective snapshot, not later draft edits.
 Containing Text is persisted and applies only on Find Plus. Hex is ephemeral, starts off and is never saved. See [content search](content-search.md).
 Exclude is a separate FindPlus key, active only on Find Plus even with More Filters collapsed.
-Other tabs ignore its validation and matching. It shares filename mode/case but never history.
+Other tabs ignore its validation and matching. It shares filename mode and case settings and has its own history.
 See [exclusion rules](exclusion.md).
 
 ## Configuration structure and migration
@@ -63,7 +63,7 @@ See [exclusion rules](exclusion.md).
 - **Advanced:** extension, extension-only, file-type, size-mode, size-start, size-end and size-unit.
 - **FindPlus:** Expanded (defaults false), containing-text and exclude.
 - **Columns:** Order, Sort, Direction, Visible_<id> and Width_<id>.
-- **History:** Names, a GKeyFile escaped string list, newest first.
+- **History:** Names, ContainingText, Locations, and Exclude, each an escaped string list, newest first.
 
 Stable column IDs are name, folder, size, type, modified, created, accessed, permissions, path,
 mime, detailed-type, group, owner, bytes and bits. Missing Bytes/Bits visibility defaults to hidden;
@@ -88,12 +88,16 @@ switching tabs also never searches. An informational restored tab keeps Find dis
 
 ## History
 
-The arrow at the right of either filename entry opens the same persistent list. A valid initiated
-Name & Location or Find Plus search adds its nonempty filename, moving an exact duplicate to the
-front and keeping at most 20 entries. Capitalization, spaces, wildcards and unusual characters are
-preserved. Typing, Date Modified and Advanced searches do not add entries. Selecting an entry
-updates both filename controls without searching. Clear History empties the list without erasing
-the current filename, which is stored separately as the editable Search value.
+File name, Containing text, Look in, and Exclude each have their own list of up to
+20 recent unique values. A valid search adds only the values it uses. An exact duplicate
+moves to the front. Case and meaningful whitespace are preserved, and empty or whitespace-only
+entries are ignored. Look in history is shared between the two location entries. Containing
+text remembers the literal or Hex expression without changing the current Hex setting.
+
+Click the entry’s arrow or press Alt+Down to open its history. Selecting a value updates the
+field through the existing shared form without starting a search. Clear History empties that
+list and keeps the current input. Existing filename history stays in the original Names key.
+The three new lists start empty.
 
 ## Saving and simultaneous windows
 
@@ -144,7 +148,7 @@ are manipulated or saved on Wayland; normal size, tab, layout and maximization s
 
 Input limits count Unicode characters: text/pattern/extension/rename 8192, path 32768, date
 expression 1024, number 32. Oversized stored form/history strings are ignored, not truncated into
-new searches. INI input/output is bounded to 1 MiB and regular files; malformed, unreadable,
+new searches. INI input/output is bounded to 16 MiB and regular files; malformed, unreadable,
 symlink/nonregular or oversized files are preserved on save failure. Fix the file or move it aside
 to restore saving. Nothing deletes or rewrites an invalid user configuration automatically.
 

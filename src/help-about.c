@@ -112,7 +112,7 @@ GtkWidget *cf_help_about_new(void)
         "Renamed rows update paths/sorting or leave results if filters no longer match. Children of renamed directories leave the results; Find Now refreshes them. "
         "CSV/TXT Full Path and In Folder use native local paths, preserving spaces, Unicode and literal %20 rather than URI encoding. Remote results keep URIs; existing CSV quoting and TXT delimiters remain unchanged.");
     paragraph(GTK_BOX(box), "help-input-limits", "Input limits: filename/pattern, Exclude, extension and rename allow up to 8192 characters; "
-        "folder paths 32768; date expressions 1024; numeric fields 32. History keeps 20 names. Settings files are limited to 1 MiB. "
+        "folder paths 32768; date expressions 1024; numeric fields 32. Settings files are limited to 16 MiB. "
         "Linux names can contain spaces, Unicode, quotes, backslashes and brackets. Rename accepts one basename: no /, empty name, ' . ' or '..'. "
         "Dates require valid calendar values (including leap years); optional time uses 24-hour HH:mm:ss. Adjustments are signed whole numbers within ±1000000; "
         "the evaluated date must remain representable. Incomplete or invalid filters show an error when searching. "
@@ -154,7 +154,7 @@ GtkWidget *cf_help_about_new(void)
         "If unavailable, consult distribution GVfs packages (Ubuntu/Mint commonly gvfs-backends) and authentication-agent setup; install missing packages yourself. "
         "CFP installs no dependencies and captures no credentials. Nautilus/Thunar/PCManFM-Qt/GVfs handle denied/cancelled prompts and location errors. "
         "Dolphin administrative actions/transfers are outside this change and unverified. See docs/integrations.md and docs/permissions.md.");
-    paragraph(GTK_BOX(box), "help-settings", "Filename arrows show the newest 20 unique searches. Choosing fills the fields without searching; Clear History retains the current input. "
+    paragraph(GTK_BOX(box), "help-settings", "File name, Containing text, Look in, and Exclude each remember 20 recent unique values. Use the field arrow or Alt+Down to choose an entry without searching. Clear History clears only that field’s list and keeps the current input. "
         "Search values, relative expressions, last tab, window and column layout are saved in ~/.config/classic-find-plus/settings.ini (or XDG_CONFIG_HOME). "
         "Nemo's directory overrides the saved location. Startup and tab changes never search. Name always stays visible.");
     paragraph(GTK_BOX(box), "help-results", "Results: right-click a header to choose columns, drag headers to reorder and click to sort. "

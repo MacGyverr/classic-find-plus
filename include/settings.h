@@ -16,9 +16,12 @@ gboolean cf_settings_flush(CfSettings *settings, GError **error);
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(CfSettings, cf_settings_free)
 
 /* History operations merge against the latest disk list under the same settings lock. */
-char **cf_settings_history(CfSettings *settings); /* newly allocated, newest first */
-void cf_settings_history_record(CfSettings *settings, const char *name);
-void cf_settings_history_clear(CfSettings *settings);
+typedef enum {
+    CF_HISTORY_NAME, CF_HISTORY_CONTENT, CF_HISTORY_LOCATION, CF_HISTORY_EXCLUDE, CF_HISTORY_COUNT
+} CfHistoryField;
+char **cf_settings_history(CfSettings *settings, CfHistoryField field); /* newly allocated, newest first */
+void cf_settings_history_record(CfSettings *settings, CfHistoryField field, const char *value);
+void cf_settings_history_clear(CfSettings *settings, CfHistoryField field);
 /* Fill absent keys only; a concurrent writer's existing values always take precedence. */
 void cf_settings_defaults(CfSettings *settings, GKeyFile *defaults);
 

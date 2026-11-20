@@ -321,7 +321,7 @@ static GtkWidget *all_in_one(Window *w)
     gtk_widget_set_name(grid, "all-in-one");
     w->all_name = entry_new("", "all-name");
     bind_control(w, "name", w->all_name, "text");
-    cf_search_history_attach(GTK_ENTRY(w->all_name), w->form);
+    cf_search_history_attach(GTK_ENTRY(w->all_name), CF_HISTORY_NAME);
     field(grid, "File _name:", w->all_name, 0);
     GtkWidget *options = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
     GtkWidget *mode = combo(name_modes);
@@ -338,12 +338,14 @@ static GtkWidget *all_in_one(Window *w)
 
     GtkWidget *exclude = entry_new("", "all-exclude");
     bind_control(w, "exclude", exclude, "text");
+    cf_search_history_attach(GTK_ENTRY(exclude), CF_HISTORY_EXCLUDE);
     gtk_widget_set_tooltip_text(exclude, "Use | for OR exclusions; \\| is a literal pipe. / targets directories. RegEx uses one native expression.");
     field(grid, "_Exclude:", exclude, 1);
 
     GtkWidget *containing = entry_new("", "containing-text");
     gtk_entry_set_placeholder_text(GTK_ENTRY(containing), "Literal text or hexadecimal bytes");
     bind_control(w, "containing-text", containing, "text");
+    cf_search_history_attach(GTK_ENTRY(containing), CF_HISTORY_CONTENT);
     gtk_widget_set_tooltip_text(containing, "Literal UTF-8 text (Aa controls case), or exact Hex bytes. Maximum pattern: 64 KiB.");
     GtkWidget *content_row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
     GtkWidget *hex = gtk_check_button_new_with_label("Hex");
@@ -359,6 +361,7 @@ static GtkWidget *all_in_one(Window *w)
 
     w->all_location = entry_new("", "all-location");
     bind_control(w, "location", w->all_location, "text");
+    cf_search_history_attach(GTK_ENTRY(w->all_location), CF_HISTORY_LOCATION);
     field(grid, "_Look in:", w->all_location, 3);
     GtkWidget *location_options = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
     GtkWidget *recursive = gtk_check_button_new_with_label("Subfolders");
@@ -368,8 +371,9 @@ static GtkWidget *all_in_one(Window *w)
     gtk_widget_set_name(button, "all-browse");
     gtk_widget_set_tooltip_text(button, "Choose search folder");
     g_signal_connect(button, "clicked", G_CALLBACK(browse), w);
+    gtk_box_pack_start(GTK_BOX(location_options), button, FALSE, FALSE, 0);
     gtk_box_pack_start(GTK_BOX(location_options), recursive, FALSE, FALSE, 0);
-    gtk_box_pack_end(GTK_BOX(location_options), button, FALSE, FALSE, 0);
+    gtk_widget_set_valign(recursive, GTK_ALIGN_CENTER);
     gtk_grid_attach(GTK_GRID(grid), location_options, 2, 3, 1, 1);
 
     GtkWidget *size = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
@@ -747,7 +751,10 @@ static void find(GtkButton *button, gpointer data)
     g_object_set_data(G_OBJECT(w->view), "cf-search-active", GINT_TO_POINTER(1));
     cf_results_sync_set_search(GTK_TREE_VIEW(w->view), root, g_steal_pointer(&snapshot));
     g_set_object(&w->results_root, root);
-    cf_settings_history_record(w->settings, input.name);
+    cf_settings_history_record(w->settings, CF_HISTORY_NAME, input.name);
+    cf_settings_history_record(w->settings, CF_HISTORY_CONTENT, input.containing);
+    cf_settings_history_record(w->settings, CF_HISTORY_LOCATION, location);
+    cf_settings_history_record(w->settings, CF_HISTORY_EXCLUDE, input.exclude);
     cf_settings_flush(w->settings, NULL);
     w->has_search = TRUE;
     gtk_list_store_clear(w->store);
@@ -909,8 +916,9 @@ GtkWidget *cf_window_new(GtkApplication *app, GFile *root)
 
     GtkWidget *location = grid_new();
     w->location = entry_new(path, "search-location");
+    cf_search_history_attach(GTK_ENTRY(w->location), CF_HISTORY_LOCATION);
     w->name = entry_new("", "search-name");
-    cf_search_history_attach(GTK_ENTRY(w->name), w->form);
+    cf_search_history_attach(GTK_ENTRY(w->name), CF_HISTORY_NAME);
     field(location, "_Named:", w->name, 0);
     w->name_mode = combo(name_modes);
     gtk_grid_attach(GTK_GRID(location), w->name_mode, 2, 0, 1, 1);

@@ -5,7 +5,8 @@
 #define CF_PATH_LIMIT 32768
 #define CF_DATE_LIMIT 1024
 #define CF_NUMBER_LIMIT 32
-#define CF_SETTINGS_LIMIT (1024 * 1024)
+/* Allows all four 20-entry histories at their maximum encoded input lengths. */
+#define CF_SETTINGS_LIMIT (16 * 1024 * 1024)
 /* GTK limits count Unicode characters. Bound bytes first before decoding. */
 static inline gboolean cf_input_valid(const char *text, gsize characters)
 {

@@ -32,7 +32,7 @@ Windows 98 style Advanced search.
 
 Context menu installation.
 
-**Version 1.0.13** — a native Linux file and folder search application, inspired by the classic
+**Version 1.0.14** — a native Linux file and folder search application, inspired by the classic
 Find dialog and styled by your GTK3 desktop theme. Created by MacGyverr / ChatGPT.
 [GitHub project](https://github.com/MacGyverr/classic-find-plus) · GPL-3.0-or-later.
 
@@ -77,7 +77,7 @@ Children of renamed directories leave the results; Find Now refreshes them. See
 ## Install a Debian package
 
 Download the DEB for **your distribution and architecture** from the project's Releases page
-when available. Building 1.0.13 does not imply its DEB has been published.
+when available. Building 1.0.14 does not imply its DEB has been published.
 Mint 21.3 uses Ubuntu 22.04 (jammy) libraries; a DEB built on newer Debian may not work there.
 Double-click the downloaded DEB to use your graphical package installer, or run:
 
@@ -307,6 +307,11 @@ click-time rows and visible columns in current order/sorting, regardless of sele
 CSV quotes every field; TXT uses tabs without field quotes and normalizes embedded tabs/newlines.
 Both are UTF-8, protect spreadsheet formula prefixes, and use a native overwrite prompt.
 Only local or mounted output destinations are supported. See [export](docs/export.md).
+
+File name, Containing text, Look in, and Exclude each remember their 20 latest unique
+entries from searches that use the field. Open the field’s arrow or press Alt+Down to
+reuse an entry without starting a search. Choose Clear History to empty that field’s
+list while keeping its current input.
 
 Preferences, criteria, history, column layout and window geometry persist in
 `$XDG_CONFIG_HOME/classic-find-plus/settings.ini` (default `~/.config/classic-find-plus/settings.ini`).

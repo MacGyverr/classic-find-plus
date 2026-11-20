@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.14
+
+- Give File name, Containing text, Look in, and Exclude independent histories of up to
+  20 entries, each with its own Clear History command. Keep existing filename history.
+- Place the folder chooser beside Look in and before Subfolders in Find Plus.
+
 ## 1.0.13
 
 - Avoid native/mounted MIME and icon data probing for filenames rejected by search

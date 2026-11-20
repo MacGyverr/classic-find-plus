@@ -1,5 +1,6 @@
 #define _POSIX_C_SOURCE 200809L
 #include "input-limits.h"
+#include "content-search.h"
 #include "settings.h"
 #include <glib/gstdio.h>
 #include <sys/file.h>
@@ -8,7 +9,7 @@
 #include <unistd.h>
 #include <errno.h>
 
-struct _CfSettings { GKeyFile *data, *pending, *defaults; guint timer; gboolean migrate; GPtrArray *history; };
+struct _CfSettings { GKeyFile *data, *pending, *defaults; guint timer; gboolean migrate; GPtrArray *history[CF_HISTORY_COUNT]; };
 char *cf_settings_path(void)
 {
     return g_build_filename(g_get_user_config_dir(), "classic-find-plus", "settings.ini", NULL);
@@ -60,7 +61,7 @@ static gboolean read_keys(const char *path, GKeyFile *keys, GError **error)
     close(fd);
     if (!ok) {
         g_set_error_literal(error, G_IO_ERROR, G_IO_ERROR_INVALID_DATA,
-            "Settings must be a readable regular file of at most 1 MiB; existing file preserved.");
+            "Settings must be a readable regular file of at most 16 MiB; existing file preserved.");
         return FALSE;
     }
     return !bytes->len || g_key_file_load_from_data(keys, (const char *)bytes->data, bytes->len, G_KEY_FILE_KEEP_COMMENTS, error);
@@ -92,7 +93,7 @@ CfSettings *cf_settings_new(void)
 {
     CfSettings *s = g_new0(CfSettings, 1);
     s->data = load(NULL); s->pending = g_key_file_new(); s->defaults = g_key_file_new();
-    s->history = g_ptr_array_new_with_free_func(g_free);
+    for (guint i = 0; i < CF_HISTORY_COUNT; i++) s->history[i] = g_ptr_array_new_with_free_func(g_free);
     g_autofree char *path = cf_settings_path();
     /* Migrate once, only when the new configuration does not exist. Keep originals intact. */
     if (!g_file_test(path, G_FILE_TEST_EXISTS)) {
@@ -160,31 +161,49 @@ void cf_settings_set_strings(CfSettings *s, const char *group, const char *key, 
     g_autofree char *raw = g_key_file_get_value(encoded, group, key, NULL);
     set(s, group, key, raw);
 }
-static GPtrArray *history_read(GKeyFile *key)
+static const char *const history_keys[CF_HISTORY_COUNT] = {
+    "Names", "ContainingText", "Locations", "Exclude"
+};
+
+static gboolean history_valid(CfHistoryField field, const char *value)
+{
+    gsize limit = field == CF_HISTORY_CONTENT ? CF_CONTENT_MAX_INPUT :
+                  field == CF_HISTORY_LOCATION ? CF_PATH_LIMIT : CF_TEXT_LIMIT;
+    if (!cf_input_valid(value, limit) ||
+        (field == CF_HISTORY_CONTENT && strlen(value) > CF_CONTENT_MAX_INPUT)) return FALSE;
+    for (const char *p = value; *p; p = g_utf8_next_char(p))
+        if (!g_unichar_isspace(g_utf8_get_char(p))) return TRUE;
+    return FALSE;
+}
+
+static GPtrArray *history_read(GKeyFile *key, CfHistoryField field)
 {
     GPtrArray *list = g_ptr_array_new_with_free_func(g_free);
-    g_auto(GStrv) entries = g_key_file_get_string_list(key, "History", "Names", NULL, NULL);
-    for (guint i = 0; entries && entries[i] && list->len < 20; i++) {
-        if (!*entries[i] || !cf_input_valid(entries[i], CF_TEXT_LIMIT)) continue;
-        gboolean duplicate = FALSE;
-        for (guint j = 0; j < list->len; j++) duplicate |= !strcmp(entries[i], g_ptr_array_index(list, j));
-        if (!duplicate) g_ptr_array_add(list, g_strdup(entries[i]));
-    }
+    g_autoptr(GError) error = NULL;
+    g_auto(GStrv) entries = g_key_file_get_string_list(key, "History", history_keys[field], NULL, &error);
+    if (error) return list;
+    for (guint i = 0; entries && entries[i] && list->len < 20; i++)
+        if (history_valid(field, entries[i]) && !g_ptr_array_find_with_equal_func(list, entries[i], g_str_equal, NULL))
+            g_ptr_array_add(list, g_strdup(entries[i]));
     return list;
 }
 static void history_apply(CfSettings *s, GKeyFile *latest)
 {
-    if (!s->history->len) return;
-    g_autoptr(GPtrArray) list = history_read(latest);
-    for (guint i = 0; i < s->history->len; i++) {
-        const char *name = g_ptr_array_index(s->history, i);
-        if (!name) { g_ptr_array_set_size(list, 0); continue; }
-        for (guint j = 0; j < list->len; j++)
-            if (!strcmp(name, g_ptr_array_index(list, j))) { g_ptr_array_remove_index(list, j); break; }
-        g_ptr_array_insert(list, 0, g_strdup(name));
-        if (list->len > 20) g_ptr_array_remove_index(list, 20);
+    for (CfHistoryField field = 0; field < CF_HISTORY_COUNT; field++) {
+        GPtrArray *operations = s->history[field];
+        if (!operations->len) continue;
+        g_autoptr(GPtrArray) list = history_read(latest, field);
+        for (guint i = 0; i < operations->len; i++) {
+            const char *value = g_ptr_array_index(operations, i);
+            if (!value) { g_ptr_array_set_size(list, 0); continue; }
+            guint duplicate;
+            if (g_ptr_array_find_with_equal_func(list, value, g_str_equal, &duplicate))
+                g_ptr_array_remove_index(list, duplicate);
+            g_ptr_array_insert(list, 0, g_strdup(value));
+            if (list->len > 20) g_ptr_array_remove_index(list, 20);
+        }
+        g_key_file_set_string_list(latest, "History", history_keys[field], (const char *const *)list->pdata, list->len);
     }
-    g_key_file_set_string_list(latest, "History", "Names", (const char *const *)list->pdata, list->len);
 }
 static gboolean io_error(GError **error)
 {
@@ -199,7 +218,9 @@ gboolean cf_settings_flush(CfSettings *s, GError **error)
     g_auto(GStrv) names = g_key_file_get_groups(s->pending, &groups);
     gsize defaults_count;
     g_auto(GStrv) default_groups = g_key_file_get_groups(s->defaults, &defaults_count);
-    if (!groups && !defaults_count && !s->migrate && !s->history->len) return TRUE;
+    gboolean history_pending = FALSE;
+    for (guint i = 0; i < CF_HISTORY_COUNT; i++) history_pending |= s->history[i]->len != 0;
+    if (!groups && !defaults_count && !s->migrate && !history_pending) return TRUE;
     g_autofree char *path = cf_settings_path();
     g_autofree char *directory = g_path_get_dirname(path);
     if (g_mkdir_with_parents(directory, 0700) < 0) return io_error(error);
@@ -224,13 +245,19 @@ gboolean cf_settings_flush(CfSettings *s, GError **error)
     g_autoptr(GFile) file = g_file_new_for_path(path);
     gboolean ok;
     if (length > CF_SETTINGS_LIMIT) {
-        g_set_error_literal(error, G_IO_ERROR, G_IO_ERROR_NO_SPACE, "Settings exceed the 1 MiB limit; existing file preserved.");
+        g_set_error_literal(error, G_IO_ERROR, G_IO_ERROR_NO_SPACE, "Settings exceed the 16 MiB limit; existing file preserved.");
         ok = FALSE;
     } else ok = g_file_replace_contents(file, contents, length, NULL, FALSE,
         G_FILE_CREATE_PRIVATE | G_FILE_CREATE_REPLACE_DESTINATION, NULL, NULL, error);
     flock(fd, LOCK_UN); close(fd);
-    if (ok) { g_key_file_unref(s->pending); s->pending = g_key_file_new(); s->migrate = FALSE; g_ptr_array_set_size(s->history, 0);
-        g_key_file_unref(s->defaults); s->defaults = g_key_file_new(); }
+    if (ok) {
+        g_key_file_unref(s->pending);
+        s->pending = g_key_file_new();
+        s->migrate = FALSE;
+        for (guint i = 0; i < CF_HISTORY_COUNT; i++) g_ptr_array_set_size(s->history[i], 0);
+        g_key_file_unref(s->defaults);
+        s->defaults = g_key_file_new();
+    }
     return ok;
 }
 void cf_settings_free(CfSettings *s)
@@ -238,29 +265,30 @@ void cf_settings_free(CfSettings *s)
     if (!s) return;
     g_autoptr(GError) error = NULL;
     if (!cf_settings_flush(s, &error)) g_printerr("Classic Find Plus settings: %s\n", error->message);
-    g_key_file_unref(s->data); g_key_file_unref(s->pending); g_key_file_unref(s->defaults); g_ptr_array_unref(s->history); g_free(s);
+    g_key_file_unref(s->data); g_key_file_unref(s->pending); g_key_file_unref(s->defaults);
+    for (guint i = 0; i < CF_HISTORY_COUNT; i++) g_ptr_array_unref(s->history[i]);
+    g_free(s);
 }
 
-char **cf_settings_history(CfSettings *s)
+char **cf_settings_history(CfSettings *s, CfHistoryField field)
 {
-    /* Flush local operations, then read fresh entries from other windows/processes. */
-    if (!cf_settings_flush(s, NULL)) {
-        g_autoptr(GKeyFile) copy = load(NULL); history_apply(s, copy);
-        GPtrArray *list = history_read(copy); g_ptr_array_add(list, NULL);
-        return (char **)g_ptr_array_free(list, FALSE);
-    }
+    /* Read fresh entries from other windows, with unsaved local operations on failure. */
+    gboolean saved = cf_settings_flush(s, NULL);
     g_autoptr(GKeyFile) latest = load(NULL);
-    GPtrArray *list = history_read(latest); g_ptr_array_add(list, NULL);
+    if (!saved) history_apply(s, latest);
+    GPtrArray *list = history_read(latest, field);
+    g_ptr_array_add(list, NULL);
     return (char **)g_ptr_array_free(list, FALSE);
 }
-void cf_settings_history_record(CfSettings *s, const char *name)
+void cf_settings_history_record(CfSettings *s, CfHistoryField field, const char *value)
 {
-    if (!cf_input_valid(name, CF_TEXT_LIMIT) || !*name) return;
-    g_ptr_array_add(s->history, g_strdup(name)); queue(s);
+    if (!history_valid(field, value)) return;
+    g_ptr_array_add(s->history[field], g_strdup(value)); queue(s);
 }
-void cf_settings_history_clear(CfSettings *s)
+void cf_settings_history_clear(CfSettings *s, CfHistoryField field)
 {
-    g_ptr_array_add(s->history, NULL); queue(s);
+    g_ptr_array_set_size(s->history[field], 0);
+    g_ptr_array_add(s->history[field], NULL); queue(s);
 }
 
 void cf_settings_defaults(CfSettings *s, GKeyFile *defaults)

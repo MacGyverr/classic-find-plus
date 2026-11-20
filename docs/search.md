@@ -170,7 +170,8 @@ through column changes and sorting.
 Visibility, order, widths and sort persist with window/form state in private, atomically written
 `$XDG_CONFIG_HOME/classic-find-plus/settings.ini`. Legacy preference files migrate on first use.
 Windows load saved configuration when created and merge changed keys when saving; unchanged
-windows do not overwrite newer state on close. Filename history persists its newest 20 unique searches.
+windows do not overwrite newer state on close. File name, Containing text, Look in, and Exclude each keep 20 recent unique entries.
+Use the arrow or Alt+Down to recall an entry. Clear History empties only that list and keeps the current input.
 
 ## Traversal and lifetime
 - Search only the specified root; recursive traversal is optional and on by default. Root directory

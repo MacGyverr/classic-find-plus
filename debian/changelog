@@ -1,3 +1,9 @@
+classic-find-plus (1.0.14-1) unstable; urgency=medium
+
+  * Add independent search field histories and adjust the Find Plus location row.
+
+ -- MacGyverr / ChatGPT <classic-find@localhost>  Thu, 19 Nov 2026 12:00:00 -0800
+
 classic-find-plus (1.0.13-1) unstable; urgency=medium
 
   * Filter native filenames and active cheap metadata before MIME/icon probing.
